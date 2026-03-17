@@ -1,0 +1,941 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GeoEconOrbit — Intelligence Map</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;900&family=IBM+Plex+Mono:wght@300;400;500&family=IBM+Plex+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+:root {
+  --bg:        #020810;
+  --bg2:       #060f1e;
+  --bg3:       #0a1628;
+  --border:    #0d2444;
+  --border2:   #1a3a6a;
+  --accent:    #00d4ff;
+  --accent2:   #ff3333;
+  --accent3:   #00ff88;
+  --gold:      #ffd700;
+  --text:      #c8dff0;
+  --text2:     #6a8aaa;
+  --text3:     #3a5570;
+  --font-hd:   'Orbitron', monospace;
+  --font-mono: 'IBM Plex Mono', monospace;
+  --font-body: 'IBM Plex Sans', sans-serif;
+}
+
+* { margin:0; padding:0; box-sizing:border-box; }
+html,body { height:100%; overflow:hidden; }
+body { background:var(--bg); color:var(--text); font-family:var(--font-body); display:flex; flex-direction:column; }
+
+/* ── SCANLINE overlay ─────────────────────────────────── */
+body::before {
+  content:''; position:fixed; inset:0; pointer-events:none; z-index:9999;
+  background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,.03) 2px, rgba(0,0,0,.03) 4px);
+}
+
+/* ── HEADER ───────────────────────────────────────────── */
+header {
+  height:52px; flex-shrink:0;
+  background: linear-gradient(90deg, #020810 0%, #061528 40%, #020c1a 100%);
+  border-bottom:1px solid var(--border2);
+  display:flex; align-items:center; justify-content:space-between;
+  padding:0 20px; position:relative; z-index:1000;
+}
+header::after {
+  content:''; position:absolute; bottom:0; left:0; right:0; height:1px;
+  background: linear-gradient(90deg, transparent, var(--accent), var(--accent2), var(--accent), transparent);
+}
+.hd-left { display:flex; align-items:center; gap:16px; }
+.logo-wrap { display:flex; align-items:center; gap:10px; }
+.logo-icon { width:28px; height:28px; border:2px solid var(--accent); border-radius:50%; display:flex; align-items:center; justify-content:center; position:relative; }
+.logo-icon::before { content:''; position:absolute; width:8px; height:8px; background:var(--accent); border-radius:50%; box-shadow:0 0 8px var(--accent); animation:pulse 2s infinite; }
+@keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.5;transform:scale(1.5)} }
+.logo-text { font-family:var(--font-hd); font-size:.9rem; font-weight:700; letter-spacing:2px; }
+.logo-text span { color:var(--accent); }
+.live-ind { display:flex; align-items:center; gap:6px; font-family:var(--font-mono); font-size:.65rem; color:var(--accent2); }
+.live-dot { width:6px; height:6px; background:var(--accent2); border-radius:50%; animation:pulse 1s infinite; }
+.hd-stats { display:flex; gap:20px; font-family:var(--font-mono); font-size:.65rem; color:var(--text2); }
+.hd-stat b { color:var(--accent); }
+.hd-right { display:flex; align-items:center; gap:12px; }
+.tg-btn {
+  font-family:var(--font-hd); font-size:.6rem; font-weight:600; letter-spacing:1px;
+  padding:6px 14px; background:transparent;
+  border:1px solid var(--accent); color:var(--accent);
+  text-decoration:none; cursor:pointer;
+  transition:all .2s; clip-path:polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%);
+}
+.tg-btn:hover { background:var(--accent); color:var(--bg); }
+
+/* ── MAIN LAYOUT ──────────────────────────────────────── */
+.layout { display:flex; flex:1; overflow:hidden; }
+
+/* ── LEFT PANEL ───────────────────────────────────────── */
+.left-panel {
+  width:320px; flex-shrink:0;
+  background:var(--bg2);
+  border-right:1px solid var(--border);
+  display:flex; flex-direction:column;
+  overflow:hidden;
+}
+.panel-header {
+  padding:10px 14px;
+  background:var(--bg3);
+  border-bottom:1px solid var(--border);
+  display:flex; justify-content:space-between; align-items:center;
+}
+.panel-title { font-family:var(--font-hd); font-size:.62rem; font-weight:600; letter-spacing:2px; color:var(--accent); }
+.count-badge {
+  font-family:var(--font-mono); font-size:.6rem;
+  background:rgba(0,212,255,.1); border:1px solid var(--accent);
+  color:var(--accent); padding:2px 8px;
+}
+
+/* Filtros */
+.filters { display:flex; gap:4px; padding:8px 10px; background:var(--bg); border-bottom:1px solid var(--border); flex-wrap:wrap; }
+.fb {
+  font-family:var(--font-mono); font-size:.58rem; letter-spacing:.5px;
+  padding:3px 9px; background:transparent;
+  border:1px solid var(--border2); color:var(--text2);
+  cursor:pointer; transition:all .2s;
+}
+.fb.on { background:rgba(0,212,255,.12); border-color:var(--accent); color:var(--accent); }
+.fb:hover:not(.on) { border-color:var(--text2); color:var(--text); }
+
+/* News list */
+.news-scroll { flex:1; overflow-y:auto; }
+.news-scroll::-webkit-scrollbar { width:3px; }
+.news-scroll::-webkit-scrollbar-thumb { background:var(--border2); }
+
+.ni {
+  padding:11px 14px; border-bottom:1px solid var(--border);
+  cursor:pointer; transition:background .15s; position:relative;
+}
+.ni::before {
+  content:''; position:absolute; left:0; top:0; bottom:0; width:3px;
+  background:transparent; transition:background .2s;
+}
+.ni:hover { background:rgba(0,212,255,.04); }
+.ni:hover::before { background:var(--border2); }
+.ni.active { background:rgba(0,212,255,.07); }
+.ni.active::before { background:var(--accent); }
+.ni.urgente.active::before { background:var(--accent2); }
+
+.ni-urg { font-family:var(--font-hd); font-size:.55rem; font-weight:600; letter-spacing:2px; color:var(--accent2); margin-bottom:4px; }
+.ni-title { font-size:.78rem; font-weight:500; color:var(--text); line-height:1.45; margin-bottom:5px; }
+.ni-desc { font-size:.7rem; color:var(--text2); line-height:1.4; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+.ni-meta { display:flex; align-items:center; gap:8px; margin-top:7px; flex-wrap:wrap; }
+.ni-tag {
+  font-family:var(--font-mono); font-size:.58rem; padding:1px 7px;
+  border:1px solid; letter-spacing:.5px;
+}
+.ni-tag.conflicto { border-color:#ff3333; color:#ff5555; background:rgba(255,51,51,.08); }
+.ni-tag.militar   { border-color:#4488ff; color:#66aaff; background:rgba(68,136,255,.08); }
+.ni-tag.mercados  { border-color:#00ff88; color:#44ffaa; background:rgba(0,255,136,.08); }
+.ni-tag.escalada  { border-color:#ffd700; color:#ffd700; background:rgba(255,215,0,.08); }
+.ni-hora  { font-family:var(--font-mono); font-size:.58rem; color:var(--text3); }
+.ni-src   { font-family:var(--font-mono); font-size:.58rem; color:var(--text3); }
+
+/* ── MAP ──────────────────────────────────────────────── */
+#map { flex:1; position:relative; }
+.leaflet-container { background:#020810 !important; }
+
+/* ── RIGHT PANEL ──────────────────────────────────────── */
+.right-panel {
+  width:300px; flex-shrink:0;
+  background:var(--bg2);
+  border-left:1px solid var(--border);
+  display:flex; flex-direction:column;
+  overflow:hidden;
+}
+
+/* Tabs */
+.tabs { display:flex; border-bottom:1px solid var(--border); }
+.tab {
+  flex:1; font-family:var(--font-hd); font-size:.55rem; letter-spacing:1.5px;
+  padding:10px 6px; text-align:center; cursor:pointer;
+  color:var(--text2); border-bottom:2px solid transparent;
+  transition:all .2s; background:transparent;
+  border-top:none; border-left:none; border-right:none;
+}
+.tab.on { color:var(--accent); border-bottom-color:var(--accent); background:rgba(0,212,255,.05); }
+.tab-content { display:none; flex:1; flex-direction:column; overflow:hidden; }
+.tab-content.on { display:flex; }
+
+/* Detail panel */
+.detail-empty {
+  flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center;
+  gap:12px; color:var(--text3); font-family:var(--font-mono); font-size:.65rem; text-align:center; padding:20px;
+}
+.detail-empty .de-icon { font-size:2rem; opacity:.3; }
+.detail-card { padding:14px; overflow-y:auto; flex:1; }
+.detail-card::-webkit-scrollbar { width:3px; }
+.detail-card::-webkit-scrollbar-thumb { background:var(--border2); }
+.dc-type { font-family:var(--font-hd); font-size:.55rem; letter-spacing:2px; margin-bottom:8px; }
+.dc-type.conflicto { color:var(--accent2); }
+.dc-type.militar   { color:#66aaff; }
+.dc-type.mercados  { color:var(--accent3); }
+.dc-title { font-size:.9rem; font-weight:500; line-height:1.5; margin-bottom:10px; color:#fff; }
+.dc-desc  { font-size:.75rem; color:var(--text2); line-height:1.6; margin-bottom:14px; }
+.dc-row   { display:flex; justify-content:space-between; padding:5px 0; border-bottom:1px solid var(--border); font-family:var(--font-mono); font-size:.63rem; }
+.dc-row span:first-child { color:var(--text3); }
+.dc-row span:last-child  { color:var(--text); }
+.dc-tg-btn {
+  display:block; margin-top:14px; text-align:center;
+  font-family:var(--font-hd); font-size:.6rem; letter-spacing:1px;
+  padding:8px; background:rgba(0,212,255,.1);
+  border:1px solid var(--accent); color:var(--accent);
+  text-decoration:none; transition:all .2s;
+}
+.dc-tg-btn:hover { background:var(--accent); color:var(--bg); }
+
+/* Chat */
+.chat-wrap { display:flex; flex-direction:column; flex:1; overflow:hidden; }
+.chat-msgs {
+  flex:1; overflow-y:auto; padding:10px;
+  display:flex; flex-direction:column; gap:8px;
+}
+.chat-msgs::-webkit-scrollbar { width:3px; }
+.chat-msgs::-webkit-scrollbar-thumb { background:var(--border2); }
+.chat-msg {
+  background:var(--bg3); border:1px solid var(--border);
+  border-radius:0 6px 6px 6px; padding:8px 10px; max-width:90%;
+  animation:fadeIn .3s ease;
+}
+@keyframes fadeIn { from{opacity:0;transform:translateY(4px)} to{opacity:1;transform:none} }
+.chat-msg.own { align-self:flex-end; border-radius:6px 0 6px 6px; background:rgba(0,212,255,.08); border-color:var(--border2); }
+.chat-nick { font-family:var(--font-mono); font-size:.58rem; color:var(--accent); margin-bottom:3px; }
+.chat-msg.own .chat-nick { color:var(--accent3); }
+.chat-text { font-size:.72rem; color:var(--text); line-height:1.45; }
+.chat-time { font-family:var(--font-mono); font-size:.55rem; color:var(--text3); margin-top:3px; text-align:right; }
+.chat-form { padding:10px; border-top:1px solid var(--border); display:flex; gap:6px; }
+.chat-input {
+  flex:1; background:var(--bg3); border:1px solid var(--border);
+  color:var(--text); font-family:var(--font-mono); font-size:.7rem;
+  padding:7px 10px; outline:none; transition:border .2s;
+}
+.chat-input:focus { border-color:var(--border2); }
+.chat-send {
+  font-family:var(--font-hd); font-size:.55rem; letter-spacing:1px;
+  padding:7px 12px; background:rgba(0,212,255,.1);
+  border:1px solid var(--accent); color:var(--accent);
+  cursor:pointer; transition:all .2s;
+}
+.chat-send:hover { background:var(--accent); color:var(--bg); }
+.nick-form { padding:20px; display:flex; flex-direction:column; gap:10px; }
+.nick-form label { font-family:var(--font-mono); font-size:.65rem; color:var(--text2); }
+.nick-input {
+  background:var(--bg3); border:1px solid var(--border2);
+  color:var(--text); font-family:var(--font-mono); font-size:.75rem;
+  padding:8px 12px; outline:none;
+}
+.nick-btn {
+  font-family:var(--font-hd); font-size:.6rem; letter-spacing:1px;
+  padding:9px; background:rgba(0,212,255,.1);
+  border:1px solid var(--accent); color:var(--accent);
+  cursor:pointer; transition:all .2s;
+}
+.nick-btn:hover { background:var(--accent); color:var(--bg); }
+
+/* Sources tab */
+.sources-list { flex:1; overflow-y:auto; padding:10px; display:flex; flex-direction:column; gap:6px; }
+.src-item { background:var(--bg3); border:1px solid var(--border); padding:8px 10px; }
+.src-name { font-family:var(--font-mono); font-size:.65rem; color:var(--accent); }
+.src-status { display:flex; justify-content:space-between; margin-top:4px; font-family:var(--font-mono); font-size:.58rem; color:var(--text2); }
+.src-ok  { color:var(--accent3); }
+.src-err { color:var(--accent2); }
+
+/* ── POPUP ────────────────────────────────────────────── */
+.leaflet-popup-content-wrapper {
+  background:var(--bg3) !important; color:var(--text) !important;
+  border:1px solid var(--border2) !important;
+  border-radius:0 !important; box-shadow:0 4px 30px rgba(0,0,0,.8) !important;
+  max-width:280px !important;
+}
+.leaflet-popup-tip-container { display:none; }
+.pu-type  { font-family:var(--font-hd); font-size:.55rem; letter-spacing:2px; margin-bottom:6px; }
+.pu-title { font-size:.82rem; font-weight:500; color:#fff; line-height:1.4; margin-bottom:7px; }
+.pu-desc  { font-size:.7rem; color:var(--text2); line-height:1.45; margin-bottom:8px; }
+.pu-foot  { display:flex; justify-content:space-between; font-family:var(--font-mono); font-size:.58rem; color:var(--text3); }
+
+/* ── STATUSBAR ────────────────────────────────────────── */
+.statusbar {
+  height:26px; flex-shrink:0;
+  background:var(--bg); border-top:1px solid var(--border);
+  display:flex; align-items:center; gap:24px;
+  padding:0 16px; font-family:var(--font-mono); font-size:.6rem; color:var(--text3);
+}
+.statusbar b { color:var(--accent); }
+.sb-sep { color:var(--border2); }
+
+/* ── LOADING ──────────────────────────────────────────── */
+.ld-wrap { display:flex; align-items:center; justify-content:center; height:100px; gap:6px; }
+.ld { width:6px; height:6px; background:var(--border2); border-radius:50%; animation:ldbounce .7s infinite alternate; }
+.ld:nth-child(2){animation-delay:.15s} .ld:nth-child(3){animation-delay:.3s}
+@keyframes ldbounce{to{transform:translateY(-8px);background:var(--accent);opacity:.8}}
+
+/* ── MOBILE ───────────────────────────────────────────── */
+@media(max-width:900px){
+  .left-panel  { width:260px; }
+  .right-panel { display:none; }
+}
+@media(max-width:600px){
+  .left-panel { display:none; }
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="hd-left">
+    <div class="logo-wrap">
+      <div class="logo-icon"></div>
+      <div class="logo-text">Geo<span>Econ</span>Orbit</div>
+    </div>
+    <div class="live-ind"><div class="live-dot"></div>LIVE INTEL</div>
+    <div class="hd-stats">
+      <span>EVENTOS: <b id="st-total">—</b></span>
+      <span>CONFLICTOS: <b id="st-conf">—</b></span>
+      <span>ACTUALIZADO: <b id="st-hora">—</b></span>
+    </div>
+  </div>
+  <div class="hd-right">
+    <a href="https://t.me/GeoEconOrbit" target="_blank" class="tg-btn">📢 CANAL TELEGRAM</a>
+  </div>
+</header>
+
+<div class="layout">
+
+  <!-- LEFT: News list -->
+  <div class="left-panel">
+    <div class="panel-header">
+      <span class="panel-title">ÚLTIMAS NOTICIAS</span>
+      <span class="count-badge" id="cnt">0</span>
+    </div>
+    <div class="filters">
+      <button class="fb on" onclick="setFiltro('todos',this)">TODOS</button>
+      <button class="fb"    onclick="setFiltro('conflicto',this)">⚔ CONFLICTO</button>
+      <button class="fb"    onclick="setFiltro('militar',this)">✈ MILITAR</button>
+      <button class="fb"    onclick="setFiltro('mercados',this)">📊 MERCADOS</button>
+      <button class="fb"    onclick="setFiltro('urgente',this)">🚨 URGENTE</button>
+    </div>
+    <div class="news-scroll" id="newsList">
+      <div class="ld-wrap"><div class="ld"></div><div class="ld"></div><div class="ld"></div></div>
+    </div>
+  </div>
+
+  <!-- MAP -->
+  <div id="map"></div>
+
+  <!-- RIGHT: Detail + Chat + Sources -->
+  <div class="right-panel">
+    <div class="tabs">
+      <button class="tab on"  onclick="setTab('detail',this)">DETALLE</button>
+      <button class="tab"     onclick="setTab('chat',this)">CHAT</button>
+      <button class="tab"     onclick="setTab('sources',this)">FUENTES</button>
+    </div>
+
+    <!-- Detail -->
+    <div class="tab-content on" id="tab-detail">
+      <div class="detail-empty" id="detailEmpty">
+        <div class="de-icon">🎯</div>
+        <div>Selecciona una noticia<br>o punto del mapa</div>
+      </div>
+      <div class="detail-card" id="detailCard" style="display:none"></div>
+    </div>
+
+    <!-- Chat -->
+    <div class="tab-content" id="tab-chat">
+      <div id="nickForm" class="nick-form">
+        <label>IDENTIFICADOR DE USUARIO</label>
+        <input class="nick-input" id="nickInput" placeholder="Ej: Analista_01" maxlength="20"/>
+        <button class="nick-btn" onclick="setNick()">ACCEDER AL CHAT →</button>
+      </div>
+      <div class="chat-wrap" id="chatWrap" style="display:none">
+        <div class="chat-msgs" id="chatMsgs"></div>
+        <div class="chat-form">
+          <input class="chat-input" id="chatInput" placeholder="Escribe un mensaje..." maxlength="200" onkeydown="if(event.key==='Enter')sendMsg()"/>
+          <button class="chat-send" onclick="sendMsg()">ENV</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sources -->
+    <div class="tab-content" id="tab-sources">
+      <div class="sources-list" id="sourcesList">
+        <div class="ld-wrap"><div class="ld"></div><div class="ld"></div><div class="ld"></div></div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div class="statusbar">
+  <span>GEOECONORBIT INTEL MAP v2.0</span>
+  <span class="sb-sep">|</span>
+  <span>FUENTES: <b id="sb-src">18</b></span>
+  <span class="sb-sep">|</span>
+  <span>MARKERS: <b id="sb-mk">0</b></span>
+  <span class="sb-sep">|</span>
+  <span>PRÓX. ACT: <b id="sb-next">60s</b></span>
+</div>
+
+<script>
+// ════════════════════════════════════════════════════════
+//                    CONFIGURACIÓN
+// ════════════════════════════════════════════════════════
+var CFG = {
+  redis_url:   'https://loved-wallaby-71460.upstash.io',
+  redis_token: 'gQAAAAAAARckAAIncDIwNDA1YjBlMDJlMDI0YWQwYjE1YWM4YWUzODRjYmU0N3AyNzE0NjA',
+  tg:          'https://t.me/GeoEconOrbit',
+  map_key:     'geobot:noticias_mapa',
+  chat_key:    'geobot:chat',
+  refresh_sec: 60,
+};
+
+// ════════════════════════════════════════════════════════
+//                 COORDENADAS DE ZONAS
+// ════════════════════════════════════════════════════════
+var ZONAS = {
+  ukraine:[48.37,31.16],    ucrania:[48.37,31.16],   kyiv:[50.45,30.52],
+  kharkiv:[50.00,36.23],    zaporizhzhia:[47.83,35.14], donbas:[48.0,38.0],
+  russia:[55.75,37.61],     rusia:[55.75,37.61],     moscow:[55.75,37.61],
+  moscow:[55.75,37.61],     belgorod:[50.59,36.58],
+  gaza:[31.35,34.30],       israel:[31.77,35.21],    'west bank':[31.9,35.2],
+  'tel aviv':[32.07,34.78], jerusalem:[31.77,35.21],
+  iran:[32.43,53.68],       tehran:[35.68,51.38],    teherán:[35.68,51.38],
+  isfahan:[32.65,51.67],    'bandar abbas':[27.18,56.27],
+  syria:[34.80,38.99],      siria:[34.80,38.99],     damascus:[33.51,36.29],
+  aleppo:[36.20,37.15],     idlib:[35.93,36.63],
+  yemen:[15.55,48.51],      houthi:[14.53,43.73],    aden:[12.77,45.03],
+  hodeidah:[14.80,42.95],   'red sea':[20.00,38.00], 'mar rojo':[20.00,38.00],
+  lebanon:[33.88,35.50],    libano:[33.88,35.50],    beirut:[33.88,35.50],
+  iraq:[33.22,43.67],       irak:[33.22,43.67],      baghdad:[33.34,44.40],
+  mosul:[36.33,43.12],      basra:[30.51,47.82],
+  taiwan:[23.70,121.00],    china:[35.86,104.19],    beijing:[39.90,116.39],
+  'south china sea':[15.0,114.0], 'strait of taiwan':[24.5,120.5],
+  'north korea':[40.33,127.51],   pyongyang:[39.03,125.75],
+  'south korea':[37.56,126.97],
+  sudan:[15.55,32.53],      khartoum:[15.55,32.53],
+  sahel:[15.0,2.0],         mali:[17.57,-3.99],      niger:[17.61,8.08],
+  'burkina faso':[12.36,-1.53], somalia:[5.15,46.20],
+  'gulf of aden':[12.0,48.0],
+  opec:[24.47,54.37],       'saudi arabia':[24.68,46.72], riyadh:[24.68,46.72],
+  'strait of hormuz':[26.5,56.5], 'persian gulf':[27.0,52.0],
+  'golfo persico':[27.0,52.0],
+  pakistan:[30.37,69.34],   india:[20.59,78.96],     kashmir:[34.0,76.0],
+  'baltic':[57.0,20.0],     'mar báltico':[57.0,20.0],
+  nato:[48.0,16.0],         poland:[52.0,20.0],      romania:[45.0,25.0],
+  'black sea':[43.0,34.0],  'mar negro':[43.0,34.0],
+};
+
+// ════════════════════════════════════════════════════════
+//              FUENTES OFICIALES RSS (vía proxy)
+// ════════════════════════════════════════════════════════
+var SOURCES = [
+  { name:'Reuters World',    url:'https://feeds.reuters.com/reuters/worldNews', type:'rss' },
+  { name:'Al Jazeera',       url:'https://www.aljazeera.com/xml/rss/all.xml',   type:'rss' },
+  { name:'BBC World',        url:'https://feeds.bbci.co.uk/news/world/rss.xml', type:'rss' },
+  { name:'ISW',              url:'https://www.understandingwar.org/rss.xml',    type:'rss' },
+  { name:'Iran International',url:'https://www.iranintl.com/en/rss',            type:'rss' },
+  { name:'VOA News',         url:'https://www.voanews.com/api/zkvqmm-t$',       type:'rss' },
+  { name:'Defense News',     url:'https://www.defensenews.com/arc/outboundfeeds/rss/', type:'rss'},
+  { name:'Breaking Defense', url:'https://breakingdefense.com/feed/',            type:'rss' },
+  { name:'GDELT',            url:'gdelt', type:'gdelt' },
+  { name:'GeoEconOrbit Bot', url:'redis', type:'redis' },
+];
+
+var srcStatus = {};
+
+// ════════════════════════════════════════════════════════
+//                    ESTADO GLOBAL
+// ════════════════════════════════════════════════════════
+var STATE = {
+  noticias:     [],
+  markers:      [],
+  filtro:       'todos',
+  tab:          'detail',
+  nick:         localStorage.getItem('geo_nick') || null,
+  selectedId:   null,
+  countdown:    CFG.refresh_sec,
+  seenHashes:   new Set(),
+};
+
+// ════════════════════════════════════════════════════════
+//                   MAPA LEAFLET
+// ════════════════════════════════════════════════════════
+var map = L.map('map', { center:[25,15], zoom:2, minZoom:1, zoomControl:true });
+L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png',{
+  attribution:'©OSM ©CARTO', subdomains:'abcd', maxZoom:19
+}).addTo(map);
+// Labels layer on top
+L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_only_labels/{z}/{x}/{y}{r}.png',{
+  subdomains:'abcd', maxZoom:19, pane:'shadowPane'
+}).addTo(map);
+
+// ════════════════════════════════════════════════════════
+//               DEDUPLICACIÓN ESTRICTA
+// ════════════════════════════════════════════════════════
+function hashStr(s) {
+  // djb2 hash — rápido y sin dependencias
+  var h = 5381;
+  for (var i=0; i<s.length; i++) h = ((h<<5)+h) ^ s.charCodeAt(i);
+  return (h>>>0).toString(36);
+}
+
+function dedupKey(n) {
+  // Clave de dedup basada en primeras 80 chars del título normalizado
+  var t = (n.titulo||'').toLowerCase()
+    .replace(/[^\w\s]/g,'').replace(/\s+/g,' ').trim().slice(0,80);
+  return hashStr(t);
+}
+
+function esNueva(n) {
+  var k = dedupKey(n);
+  if (STATE.seenHashes.has(k)) return false;
+  STATE.seenHashes.add(k);
+  return true;
+}
+
+// ════════════════════════════════════════════════════════
+//            DETECCIÓN DE COORDENADAS
+// ════════════════════════════════════════════════════════
+function getCoords(n) {
+  if (n.coords && n.coords.length === 2 &&
+      n.coords[0] !== 0 && n.coords[1] !== 0) return n.coords;
+
+  var t = ((n.titulo||'')+' '+(n.desc||'')).toLowerCase();
+  // Ordenar por longitud desc para que "north korea" > "korea"
+  var keys = Object.keys(ZONAS).sort(function(a,b){ return b.length-a.length; });
+  for (var i=0; i<keys.length; i++) {
+    if (t.indexOf(keys[i]) !== -1) return ZONAS[keys[i]];
+  }
+  return null; // sin coords = no se pone marker
+}
+
+// ════════════════════════════════════════════════════════
+//                 FETCH REDIS (noticias del bot)
+// ════════════════════════════════════════════════════════
+async function fetchRedis() {
+  try {
+    var r = await fetch(CFG.redis_url+'/lrange/'+CFG.map_key+'/0/49', {
+      headers:{ Authorization:'Bearer '+CFG.redis_token }
+    });
+    var d = await r.json();
+    srcStatus['GeoEconOrbit Bot'] = 'ok';
+    return (d.result||[]).map(function(s){
+      try{ return JSON.parse(s); }catch(e){ return null; }
+    }).filter(Boolean);
+  } catch(e) {
+    srcStatus['GeoEconOrbit Bot'] = 'error';
+    return [];
+  }
+}
+
+// ════════════════════════════════════════════════════════
+//            FETCH RSS (vía allorigins CORS proxy)
+// ════════════════════════════════════════════════════════
+var KEYWORDS = ['war','attack','strike','missile','killed','iran','israel','ukraine',
+  'russia','hamas','houthi','nato','sanctions','military','conflict','nuclear',
+  'invasion','airstrike','explosion','troops','offensive','escalation'];
+
+function esRelevante(titulo, desc) {
+  var t = ((titulo||'')+(desc||'')).toLowerCase();
+  for (var i=0; i<KEYWORDS.length; i++) {
+    if (t.indexOf(KEYWORDS[i]) !== -1) return true;
+  }
+  return false;
+}
+
+function detectarTipo(titulo, desc) {
+  var t = ((titulo||'')+(desc||'')).toLowerCase();
+  if (/attack|strike|airstrike|bombing|missile|killed|troops|invasion|offensive|shelling/.test(t)) return 'conflicto';
+  if (/military|aircraft|warship|nato|fighter|bomber|fleet|navy|army/.test(t)) return 'militar';
+  if (/oil|gold|opec|sanctions|market|price|crude|embargo/.test(t)) return 'mercados';
+  return 'conflicto';
+}
+
+async function fetchRSS(src) {
+  var proxyUrl = 'https://api.allorigins.win/get?url='+encodeURIComponent(src.url);
+  try {
+    var r = await fetch(proxyUrl, {signal: AbortSignal.timeout(8000)});
+    var d = await r.json();
+    var xml = new DOMParser().parseFromString(d.contents, 'text/xml');
+    var items = Array.from(xml.querySelectorAll('item, entry'));
+    var out = [];
+    items.slice(0,8).forEach(function(item) {
+      var titulo = (item.querySelector('title')||{}).textContent||'';
+      var desc = ((item.querySelector('description,summary,content')||{}).textContent||'')
+        .replace(/<[^>]+>/g,'').trim().slice(0,400);
+      var link = (item.querySelector('link')||{}).textContent||
+                 (item.querySelector('link')||{}).getAttribute&&
+                 (item.querySelector('link')||{getAttribute:function(){return ''}}).getAttribute('href')||'';
+      titulo = titulo.trim();
+      if (!titulo || !esRelevante(titulo,desc)) return;
+      out.push({
+        id: hashStr(titulo.slice(0,60)),
+        titulo: titulo,
+        desc: desc,
+        fuente: src.name,
+        hora: new Date().toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'}),
+        tipo: detectarTipo(titulo,desc),
+        urgente: /BREAKING|URGENT|URGENTE/i.test(titulo),
+        coords: null,
+      });
+    });
+    srcStatus[src.name] = 'ok';
+    return out;
+  } catch(e) {
+    srcStatus[src.name] = 'error';
+    return [];
+  }
+}
+
+// ════════════════════════════════════════════════════════
+//                   FETCH GDELT
+// ════════════════════════════════════════════════════════
+async function fetchGDELT() {
+  try {
+    var url = 'https://api.gdeltproject.org/api/v2/doc/doc?query=war+OR+conflict+OR+military+attack+OR+iran+OR+ukraine+OR+israel&mode=artlist&maxrecords=8&sort=DateDesc&format=json&timespan=60min';
+    var r = await fetch(url, {signal: AbortSignal.timeout(8000)});
+    var d = await r.json();
+    var out = [];
+    (d.articles||[]).forEach(function(a) {
+      var titulo = (a.title||'').trim();
+      if (!titulo || !esRelevante(titulo,'')) return;
+      out.push({
+        id: hashStr(titulo.slice(0,60)),
+        titulo: titulo,
+        desc: '',
+        fuente: 'GDELT/'+((a.domain||'').split('.')[0]),
+        hora: new Date().toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'}),
+        tipo: detectarTipo(titulo,''),
+        urgente: false,
+        coords: null,
+      });
+    });
+    srcStatus['GDELT'] = 'ok';
+    return out;
+  } catch(e) {
+    srcStatus['GDELT'] = 'error';
+    return [];
+  }
+}
+
+// ════════════════════════════════════════════════════════
+//              CARGAR Y RENDERIZAR NOTICIAS
+// ════════════════════════════════════════════════════════
+async function cargar() {
+  STATE.seenHashes.clear();
+  var todas = [];
+
+  // Cargar en paralelo
+  var promises = [fetchRedis(), fetchGDELT()];
+  SOURCES.filter(function(s){return s.type==='rss';}).forEach(function(s){
+    promises.push(fetchRSS(s));
+  });
+
+  var resultados = await Promise.allSettled(promises);
+  resultados.forEach(function(r){
+    if (r.status==='fulfilled') todas = todas.concat(r.value||[]);
+  });
+
+  // Deduplicar
+  var deduped = todas.filter(function(n){ return esNueva(n); });
+
+  // Ordenar: urgentes primero, luego por hora
+  deduped.sort(function(a,b){
+    if (a.urgente && !b.urgente) return -1;
+    if (!a.urgente && b.urgente) return 1;
+    return (b.hora||'').localeCompare(a.hora||'');
+  });
+
+  STATE.noticias = deduped;
+  renderNoticias();
+  renderMarkers();
+  actualizarStats();
+  renderSources();
+}
+
+// ════════════════════════════════════════════════════════
+//                 RENDER SIDEBAR
+// ════════════════════════════════════════════════════════
+function renderNoticias() {
+  var lista = document.getElementById('newsList');
+  var filtradas = STATE.noticias.filter(function(n){
+    if (STATE.filtro==='todos')   return true;
+    if (STATE.filtro==='urgente') return n.urgente;
+    return n.tipo===STATE.filtro;
+  });
+
+  document.getElementById('cnt').textContent = filtradas.length;
+
+  if (!filtradas.length) {
+    lista.innerHTML = '<div class="ld-wrap" style="color:var(--text3);font-size:.7rem;font-family:var(--font-mono)">SIN DATOS</div>';
+    return;
+  }
+
+  lista.innerHTML = '';
+  filtradas.forEach(function(n, idx) {
+    var div = document.createElement('div');
+    div.className = 'ni' + (n.urgente?' urgente':'') + (n.id===STATE.selectedId?' active':'');
+    div.dataset.id = n.id;
+    div.innerHTML =
+      (n.urgente ? '<div class="ni-urg">⚠ URGENTE</div>' : '') +
+      '<div class="ni-title">'+esc(n.titulo)+'</div>' +
+      (n.desc ? '<div class="ni-desc">'+esc(n.desc)+'</div>' : '') +
+      '<div class="ni-meta">' +
+        '<span class="ni-tag '+n.tipo+'">'+tipoLabel(n.tipo)+'</span>' +
+        '<span class="ni-hora">'+n.hora+'</span>' +
+      '</div>' +
+      '<div class="ni-src">'+esc(n.fuente)+'</div>';
+    div.onclick = function(){ seleccionar(n); };
+    lista.appendChild(div);
+  });
+}
+
+// ════════════════════════════════════════════════════════
+//                  RENDER MARKERS
+// ════════════════════════════════════════════════════════
+function mkIcon(tipo, urgente) {
+  var cols = { conflicto:'#ff3333', militar:'#4488ff', mercados:'#00ff88', escalada:'#ffd700' };
+  var c = cols[tipo]||'#ff8800';
+  var sz = urgente ? 16 : 11;
+  var glow = urgente ? '0 0 16px '+c+', 0 0 4px '+c : '0 0 8px '+c;
+  var anim = urgente ? 'animation:pulse 1.2s infinite' : '';
+  return L.divIcon({
+    className:'',
+    html: '<div style="width:'+sz+'px;height:'+sz+'px;background:'+c+';border:2px solid rgba(255,255,255,.5);border-radius:50%;box-shadow:'+glow+';'+anim+'"></div>',
+    iconSize:[sz,sz], iconAnchor:[sz/2,sz/2],
+  });
+}
+
+// Agrupar noticias con mismas coords en un solo marker
+function renderMarkers() {
+  STATE.markers.forEach(function(m){ map.removeLayer(m); });
+  STATE.markers = [];
+
+  // Agrupar por coords redondeadas (evitar markers superpuestos)
+  var grupos = {};
+  STATE.noticias.forEach(function(n){
+    var coords = getCoords(n);
+    if (!coords) return;
+    // Redondear a 1 decimal para agrupar cercanos
+    var key = Math.round(coords[0]*5)/5 + ',' + Math.round(coords[1]*5)/5;
+    if (!grupos[key]) grupos[key] = { coords:coords, noticias:[], urgente:false, tipo:'conflicto' };
+    grupos[key].noticias.push(n);
+    if (n.urgente) grupos[key].urgente = true;
+    // Tipo dominante
+    if (n.urgente) grupos[key].tipo = n.tipo;
+  });
+
+  Object.keys(grupos).forEach(function(key){
+    var g = grupos[key];
+    var n = g.noticias[0]; // noticia principal del grupo
+    var total = g.noticias.length;
+
+    var popupHtml =
+      '<div class="pu-type '+n.tipo+'">'+tipoLabel(n.tipo).toUpperCase()+(total>1?' +'+( total-1)+' MÁS':'')+'</div>'+
+      '<div class="pu-title">'+(n.urgente?'🚨 ':'')+esc(n.titulo)+'</div>'+
+      (n.desc?'<div class="pu-desc">'+esc(n.desc.slice(0,120))+'...</div>':'')+
+      '<div class="pu-foot"><span>'+esc(n.fuente)+'</span><span>'+n.hora+'</span></div>';
+
+    var mk = L.marker(g.coords, { icon: mkIcon(g.tipo, g.urgente) })
+      .addTo(map)
+      .bindPopup(popupHtml, { maxWidth:280 });
+
+    (function(noticia){ mk.on('click', function(){ seleccionar(noticia); }); })(n);
+    STATE.markers.push(mk);
+  });
+
+  document.getElementById('sb-mk').textContent = STATE.markers.length;
+}
+
+// ════════════════════════════════════════════════════════
+//                 SELECCIONAR NOTICIA
+// ════════════════════════════════════════════════════════
+function seleccionar(n) {
+  STATE.selectedId = n.id;
+
+  // Activar tab detalle
+  setTab('detail', document.querySelector('.tab.on')||document.querySelectorAll('.tab')[0]);
+
+  // Detail card
+  document.getElementById('detailEmpty').style.display = 'none';
+  var card = document.getElementById('detailCard');
+  card.style.display = 'block';
+  card.innerHTML =
+    '<div class="dc-type '+n.tipo+'">'+tipoLabel(n.tipo).toUpperCase()+'</div>'+
+    '<div class="dc-title">'+(n.urgente?'🚨 ':'')+esc(n.titulo)+'</div>'+
+    (n.desc?'<div class="dc-desc">'+esc(n.desc)+'</div>':'')+
+    '<div class="dc-row"><span>FUENTE</span><span>'+esc(n.fuente)+'</span></div>'+
+    '<div class="dc-row"><span>HORA</span><span>'+n.hora+' UTC</span></div>'+
+    '<div class="dc-row"><span>TIPO</span><span>'+tipoLabel(n.tipo)+'</span></div>'+
+    '<div class="dc-row"><span>URGENTE</span><span>'+(n.urgente?'SÍ ⚠':'NO')+'</span></div>'+
+    '<a href="'+CFG.tg+'" target="_blank" class="dc-tg-btn">📢 VER CANAL COMPLETO</a>';
+
+  // Destacar en sidebar
+  document.querySelectorAll('.ni').forEach(function(el){ el.classList.remove('active'); });
+  var el = document.querySelector('[data-id="'+n.id+'"]');
+  if (el) { el.classList.add('active'); el.scrollIntoView({behavior:'smooth',block:'nearest'}); }
+
+  // Centrar mapa
+  var coords = getCoords(n);
+  if (coords) map.setView(coords, Math.max(map.getZoom(), 5), {animate:true});
+}
+
+// ════════════════════════════════════════════════════════
+//                      CHAT
+// ════════════════════════════════════════════════════════
+window.setNick = function() {
+  var v = document.getElementById('nickInput').value.trim().slice(0,20);
+  if (!v) return;
+  STATE.nick = v;
+  localStorage.setItem('geo_nick', v);
+  document.getElementById('nickForm').style.display = 'none';
+  document.getElementById('chatWrap').style.display = 'flex';
+  loadChat();
+  setInterval(loadChat, 5000);
+};
+
+// Si ya tiene nick
+if (STATE.nick) {
+  document.getElementById('nickForm').style.display = 'none';
+  document.getElementById('chatWrap').style.display = 'flex';
+}
+
+async function loadChat() {
+  try {
+    var r = await fetch(CFG.redis_url+'/lrange/'+CFG.chat_key+'/0/29', {
+      headers:{ Authorization:'Bearer '+CFG.redis_token }
+    });
+    var d = await r.json();
+    var msgs = (d.result||[]).map(function(s){
+      try{ return JSON.parse(s); }catch(e){ return null; }
+    }).filter(Boolean).reverse();
+
+    var container = document.getElementById('chatMsgs');
+    var wasBottom = container.scrollTop + container.clientHeight >= container.scrollHeight - 10;
+    container.innerHTML = '';
+    msgs.forEach(function(m){
+      var div = document.createElement('div');
+      div.className = 'chat-msg'+(m.nick===STATE.nick?' own':'');
+      div.innerHTML =
+        '<div class="chat-nick">'+esc(m.nick)+'</div>'+
+        '<div class="chat-text">'+esc(m.text)+'</div>'+
+        '<div class="chat-time">'+m.hora+'</div>';
+      container.appendChild(div);
+    });
+    if (wasBottom) container.scrollTop = container.scrollHeight;
+  } catch(e) {}
+}
+
+window.sendMsg = async function() {
+  var input = document.getElementById('chatInput');
+  var text = input.value.trim().slice(0,200);
+  if (!text || !STATE.nick) return;
+  input.value = '';
+
+  var msg = JSON.stringify({
+    nick: STATE.nick,
+    text: text,
+    hora: new Date().toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'}),
+  });
+  try {
+    await fetch(CFG.redis_url+'/pipeline', {
+      method:'POST',
+      headers:{ Authorization:'Bearer '+CFG.redis_token },
+      body: JSON.stringify([
+        ['lpush', CFG.chat_key, msg],
+        ['ltrim', CFG.chat_key, 0, 49],
+        ['expire', CFG.chat_key, 86400]
+      ])
+    });
+    loadChat();
+  } catch(e) {}
+};
+
+// ════════════════════════════════════════════════════════
+//                   SOURCES PANEL
+// ════════════════════════════════════════════════════════
+function renderSources() {
+  var lista = document.getElementById('sourcesList');
+  lista.innerHTML = '';
+  SOURCES.forEach(function(s){
+    var st = srcStatus[s.name];
+    var div = document.createElement('div');
+    div.className = 'src-item';
+    div.innerHTML =
+      '<div class="src-name">'+s.name+'</div>'+
+      '<div class="src-status">'+
+        '<span>'+s.type.toUpperCase()+'</span>'+
+        '<span class="'+(st==='ok'?'src-ok':'src-err')+'">'+
+          (st==='ok'?'● ONLINE':(st==='error'?'● OFFLINE':'● —'))+
+        '</span>'+
+      '</div>';
+    lista.appendChild(div);
+  });
+}
+
+// ════════════════════════════════════════════════════════
+//                   STATS BAR
+// ════════════════════════════════════════════════════════
+function actualizarStats() {
+  var confs = STATE.noticias.filter(function(n){ return n.tipo==='conflicto'; }).length;
+  document.getElementById('st-total').textContent = STATE.noticias.length;
+  document.getElementById('st-conf').textContent  = confs;
+  document.getElementById('st-hora').textContent  = new Date().toLocaleTimeString('es-ES');
+}
+
+// ════════════════════════════════════════════════════════
+//                   UI HELPERS
+// ════════════════════════════════════════════════════════
+window.setFiltro = function(tipo, btn) {
+  STATE.filtro = tipo;
+  document.querySelectorAll('.fb').forEach(function(b){ b.classList.remove('on'); });
+  btn.classList.add('on');
+  renderNoticias();
+  renderMarkers();
+};
+
+window.setTab = function(tab, btn) {
+  STATE.tab = tab;
+  document.querySelectorAll('.tab').forEach(function(b){ b.classList.remove('on'); });
+  document.querySelectorAll('.tab-content').forEach(function(c){ c.classList.remove('on'); });
+  if (btn) btn.classList.add('on');
+  document.getElementById('tab-'+tab).classList.add('on');
+  if (tab==='chat' && STATE.nick) loadChat();
+};
+
+function tipoLabel(t) {
+  return {conflicto:'⚔ Conflicto', militar:'✈ Militar', mercados:'📊 Mercados', escalada:'⚠ Escalada'}[t]||'📍 General';
+}
+
+function esc(s) {
+  return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ════════════════════════════════════════════════════════
+//                  COUNTDOWN + AUTO-REFRESH
+// ════════════════════════════════════════════════════════
+setInterval(function(){
+  STATE.countdown--;
+  document.getElementById('sb-next').textContent = Math.max(0,STATE.countdown)+'s';
+  if (STATE.countdown <= 0) {
+    STATE.countdown = CFG.refresh_sec;
+    cargar();
+  }
+}, 1000);
+
+// ════════════════════════════════════════════════════════
+//                     ARRANQUE
+// ════════════════════════════════════════════════════════
+renderSources();
+cargar();
+if (STATE.nick) { loadChat(); setInterval(loadChat, 5000); }
+</script>
+</body>
+</html>
