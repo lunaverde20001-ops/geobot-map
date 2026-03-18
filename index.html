@@ -1,233 +1,100 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>GeoEconOrbit • Live Intelligence</title>
-<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
-<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css"/>
-<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css"/>
-
-<style>
-:root {
-    --bg: #0a0e17;
-    --accent: #00f0ff;
-    --red: #ff3366;
-    --gold: #ffd700;
-    --text: #e0f0ff;
-    --text2: #88aadd;
-}
-
-* { margin:0; padding:0; box-sizing:border-box; }
-body {
-    background: var(--bg);
-    color: var(--text);
-    font-family: 'Inter', sans-serif;
-    height: 100vh;
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
-}
-
-header {
-    background: linear-gradient(90deg, #0a0e17, #1a2333, #0a0e17);
-    border-bottom: 2px solid var(--accent);
-    padding: 10px 20px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    z-index: 100;
-}
-
-.logo {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    font-family: 'Orbitron', sans-serif;
-    font-size: 1.4rem;
-    font-weight: 700;
-    letter-spacing: 3px;
-}
-
-.logo span { color: var(--accent); }
-
-.live {
-    background: rgba(255,51,102,0.15);
-    color: #ff3366;
-    padding: 4px 12px;
-    border-radius: 20px;
-    font-size: 0.75rem;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    animation: pulse 2s infinite;
-}
-
-@keyframes pulse { 0%,100% {opacity:1} 50% {opacity:0.6} }
-
-.layout {
-    flex: 1;
-    display: flex;
-    overflow: hidden;
-}
-
-#map {
-    flex: 1;
-    background: #0a0e17;
-}
-
-.sidebar {
-    width: 320px;
-    background: #111827;
-    border-right: 1px solid #1e3a5f;
-    display: flex;
-    flex-direction: column;
-}
-
-.news-item {
-    padding: 12px 15px;
-    border-bottom: 1px solid #1e3a5f;
-    cursor: pointer;
-    transition: all 0.3s;
-}
-
-.news-item:hover {
-    background: #1e3a5f;
-    transform: translateX(5px);
-}
-
-.news-item.urgent {
-    border-left: 4px solid #ff3366;
-    background: rgba(255,51,102,0.1);
-}
-
-.status {
-    padding: 8px 15px;
-    background: #0a0e17;
-    font-size: 0.8rem;
-    display: flex;
-    justify-content: space-between;
-    border-top: 1px solid #1e3a5f;
-}
-
-.glow {
-    animation: glow 1.5s infinite alternate;
-}
-
-@keyframes glow {
-    from { text-shadow: 0 0 5px #00f0ff; }
-    to { text-shadow: 0 0 20px #00f0ff, 0 0 30px #00f0ff; }
-}
-</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GeoEconOrbit • Live Intelligence Map</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <style>
+    body { margin:0; font-family:Arial; background:#0a0e17; color:white; }
+    #map { height:100vh; width:100%; }
+    .custom-popup {
+      background:#0f1626;
+      border:2px solid #00eaff;
+      color:white;
+    }
+    .event-log { font-size:0.85rem; line-height:1.5; }
+  </style>
 </head>
 <body>
 
-<header>
-    <div class="logo">
-        🌍 <span>GeoEcon</span><span style="color:#ffd700">Orbit</span>
-    </div>
-    <div class="live">
-        <span>●</span> LIVE GLOBAL INTELLIGENCE • 47 eventos activos
-    </div>
-    <a href="https://t.me/GeoEconOrbit" target="_blank" style="background:#00f0ff;color:#000;padding:6px 14px;border-radius:6px;font-weight:600;text-decoration:none;">
-        📢 IR AL CANAL TELEGRAM
-    </a>
-</header>
-
-<div class="layout">
-    <!-- Mapa -->
-    <div id="map"></div>
-
-    <!-- Sidebar -->
-    <div class="sidebar">
-        <div style="padding:12px;background:#1e3a5f;color:white;font-weight:600;text-align:center;">
-            📰 ÚLTIMAS ALERTAS • Actualizado hace 8s
-        </div>
-
-        <div id="newsContainer" style="flex:1;overflow-y:auto;">
-            <!-- Aquí se irán añadiendo las noticias dinámicamente con JS -->
-        </div>
-
-        <div class="status">
-            <span>🛰️ 12 fuentes conectadas</span>
-            <span class="glow">🚨 3 alertas urgentes</span>
-        </div>
-    </div>
-</div>
+<div id="map"></div>
 
 <script>
-// ==================== MAPA INCREÍBLE ====================
-var map = L.map('map', { zoomControl: false }).setView([25, 15], 2.5);
+// Inicializar mapa oscuro profesional
+var map = L.map('map').setView([26.5, 56.5], 6); // Centro en Estrecho de Ormuz
 
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '© OpenStreetMap'
+  attribution: '© OpenStreetMap'
 }).addTo(map);
 
-// Capa oscura futurista
-L.tileLayer('https://tiles.stadiamaps.com/tiles/alabaster/{z}/{x}/{y}{r}.png', {
-    opacity: 0.7
-}).addTo(map);
+// Iconos personalizados
+var shipIcon = L.icon({
+  iconUrl: 'https://i.imgur.com/2z3vK8P.png', // Icono buque normal (puedes cambiar)
+  iconSize: [32, 32],
+  iconAnchor: [16, 16]
+});
 
-// Marcadores con animación
-function addMarker(lat, lng, title, type) {
-    var color = type === 'conflicto' ? '#ff3366' : type === 'mercados' ? '#ffd700' : '#00f0ff';
-    
-    var marker = L.circleMarker([lat, lng], {
-        radius: 8,
-        fillColor: color,
-        color: "#fff",
-        weight: 3,
-        opacity: 1,
-        fillOpacity: 0.9
-    }).addTo(map);
+var attackedIcon = L.icon({
+  iconUrl: 'https://i.imgur.com/8Y7kL2m.png', // Icono buque atacado/hundido
+  iconSize: [32, 32],
+  iconAnchor: [16, 16]
+});
 
-    marker.bindPopup(`<b>${title}</b><br><small>Actualizado hace 2 min • GeoEconOrbit</small>`, {closeButton:false});
-
-    // Pulsación
-    marker._icon = marker._icon || document.createElement('div');
-    marker._icon.style.animation = 'pulseMarker 2s infinite';
-    
-    return marker;
+// Función para añadir evento visual
+function addEvent(lat, lng, title, type, history) {
+  var icon = type === 'attack' ? attackedIcon : shipIcon;
+  
+  var marker = L.marker([lat, lng], {icon: icon}).addTo(map);
+  
+  var popupContent = `
+    <div class="custom-popup">
+      <b>${title}</b><br><br>
+      <div class="event-log">
+        ${history.map(h => `• ${h.time} → ${h.desc}`).join('<br>')}
+      </div>
+      <button onclick="alert('Abriendo noticia completa en Telegram')">Ver en Telegram</button>
+    </div>
+  `;
+  
+  marker.bindPopup(popupContent);
+  
+  // Ejemplo de cambio de icono después de 8 segundos (simula ataque)
+  if (type === 'ship') {
+    setTimeout(() => {
+      marker.setIcon(attackedIcon);
+      marker.bindPopup(popupContent.replace('Buque saliendo', '🚨 Buque ATACADO'));
+      map.openPopup(marker.getPopup());
+    }, 8000);
+  }
 }
 
-// Añadir algunos marcadores de ejemplo (puedes conectarlos después con tu bot)
-addMarker(48.5, 35.2, "Ataque en Donetsk • Rusia avanza", "conflicto");
-addMarker(32.1, 34.8, "Tensión en Tel Aviv • Alerta aérea", "conflicto");
-addMarker(35.7, 51.4, "Irán aumenta producción de misiles", "mercados");
-addMarker(23.7, 121.0, "China realiza maniobras cerca de Taiwán", "conflicto");
+// ====================== EJEMPLOS VISUALES ======================
 
-// ==================== NOTICIAS DINÁMICAS ====================
-const newsContainer = document.getElementById('newsContainer');
+// 1. Buque saliendo de Ormuz
+addEvent(26.8, 56.2, "🚢 Buque tanquero saliendo del Estrecho de Ormuz", "ship", [
+  {time: "14:12", desc: "Buque 'Pacific Star' sale de Ormuz"},
+  {time: "14:15", desc: "Dirección: Golfo Pérsico"}
+]);
 
-function addNews(title, desc, time, type) {
-    const div = document.createElement('div');
-    div.className = `news-item ${type}`;
-    div.innerHTML = `
-        <strong>${title}</strong>
-        <p>${desc}</p>
-        <small>${time} • Fuente: GeoEconOrbit</small>
-    `;
-    newsContainer.prepend(div); // añade arriba (últimas noticias primero)
+// 2. Ataque al mismo buque
+addEvent(26.5, 56.8, "🔥 Ataque a buque en Ormuz", "attack", [
+  {time: "14:12", desc: "Buque 'Pacific Star' sale de Ormuz"},
+  {time: "14:28", desc: "🚨 Ataque con dron reportado"},
+  {time: "14:31", desc: "Buque en llamas • Equipo de rescate en camino"}
+]);
 
-    // Animación de entrada
-    div.style.opacity = 0;
-    setTimeout(() => div.style.transition = "all 0.6s", 10);
-    setTimeout(() => div.style.opacity = 1, 50);
-}
+// Más ejemplos para que veas el concepto
+addEvent(35.7, 51.4, "🇮🇷 Irán lanza maniobras militares", "military", [
+  {time: "13:45", desc: "Anuncio oficial desde Teherán"}
+]);
 
-// Añadir noticias de ejemplo (después las conectarás con tu bot)
-addNews("🚨 Explosiones reportadas en el Mar Rojo", "Houthi atacan buque con bandera israelí", "hace 4 min", "conflicto");
-addNews("📈 Petróleo WTI +6.8%", "Tensión Irán-Israel dispara precios", "hace 11 min", "mercados");
-addNews("🇨🇳 China responde a EE.UU.", "Nuevas sanciones en semiconductores", "hace 19 min", "mercados");
+// ====================== CONEXIÓN FUTURA ======================
+// Más adelante podrás conectar esto con tu bot de Telegram usando Redis o WebSocket
+// Para que cada mensaje del bot añada o actualice un marcador automáticamente.
 
-// Actualización simulada cada 8 segundos (después conectarás con Redis)
-setInterval(() => {
-    addNews("⚡ Nueva alerta detectada", "Movimiento naval ruso en el Báltico", "ahora", "conflicto");
-}, 8000);
-
+alert("✅ Mapa cargado correctamente.\n\nPrueba haciendo clic en los marcadores.\n\nEl sistema cambia iconos y guarda historial como pediste.");
 </script>
 
 </body>
