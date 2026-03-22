@@ -1,0 +1,744 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GeoEconOrbit — Live Intel</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+:root{
+  --bg:#020912;--p1:#040d1a;--p2:#060f20;--p3:#0a1628;
+  --b1:#0d2040;--b2:#163050;--b3:#1e3e6e;
+  --acc:#00d4ff;--red:#ff2b2b;--grn:#00ff88;--gold:#ffd700;--ora:#ff8800;
+  --t1:#c8dff0;--t2:#5a7a9a;--t3:#2a4060;
+  --hd:'Orbitron',monospace;--mono:'Share Tech Mono',monospace;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100%;overflow:hidden;background:var(--bg);}
+body{display:flex;flex-direction:column;font-family:var(--mono);color:var(--t1);}
+body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:9990;
+  background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.03) 3px);}
+
+/* ── HEADER ─────────────────────────────────────────────── */
+header{height:46px;flex-shrink:0;display:flex;align-items:center;
+  justify-content:space-between;padding:0 16px;position:relative;z-index:500;
+  background:linear-gradient(90deg,#020912,#04101e 40%,#020912);}
+header::after{content:'';position:absolute;bottom:0;left:0;right:0;height:1px;
+  background:linear-gradient(90deg,transparent,var(--acc) 20%,var(--red) 50%,var(--acc) 80%,transparent);}
+.logo{display:flex;align-items:center;gap:10px;}
+.pulse{width:9px;height:9px;border-radius:50%;background:var(--acc);
+  box-shadow:0 0 10px var(--acc);animation:beat 2s infinite;}
+@keyframes beat{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.3;transform:scale(1.6)}}
+.logo h1{font-family:var(--hd);font-size:.78rem;font-weight:700;letter-spacing:3px;}
+.logo h1 s{color:var(--acc);text-decoration:none;}
+.livetag{font-size:.52rem;letter-spacing:2px;color:var(--red);
+  border:1px solid rgba(255,43,43,.35);padding:2px 8px;display:flex;align-items:center;gap:4px;}
+.livetag::before{content:'';width:5px;height:5px;border-radius:50%;
+  background:var(--red);animation:beat 1s infinite;}
+.hdstats{display:flex;gap:18px;font-size:.58rem;color:var(--t2);}
+.hdstats b{color:var(--acc);}
+.tgbtn{font-family:var(--hd);font-size:.52rem;letter-spacing:1px;padding:5px 12px;
+  border:1px solid var(--acc);color:var(--acc);text-decoration:none;
+  clip-path:polygon(6px 0%,100% 0%,calc(100% - 6px) 100%,0% 100%);
+  transition:all .2s;}
+.tgbtn:hover{background:var(--acc);color:var(--bg);}
+
+/* ── LAYOUT ─────────────────────────────────────────────── */
+.main{display:flex;flex:1;overflow:hidden;}
+#map{flex:1;}
+.leaflet-container{background:#020912!important;}
+
+/* ── SIDE PANEL ─────────────────────────────────────────── */
+aside{width:310px;flex-shrink:0;background:var(--p1);
+  border-left:1px solid var(--b1);display:flex;flex-direction:column;overflow:hidden;}
+.tabs{display:flex;border-bottom:1px solid var(--b1);}
+.tab{flex:1;font-family:var(--hd);font-size:.48rem;letter-spacing:1.5px;
+  padding:9px 3px;text-align:center;cursor:pointer;color:var(--t2);
+  border:none;background:transparent;border-bottom:2px solid transparent;transition:all .2s;}
+.tab.on{color:var(--acc);border-bottom-color:var(--acc);background:rgba(0,212,255,.04);}
+.tc{display:none;flex:1;flex-direction:column;overflow:hidden;}
+.tc.on{display:flex;}
+
+/* ── FILTER BAR ─────────────────────────────────────────── */
+.fbar{padding:7px 9px;display:flex;gap:4px;flex-wrap:wrap;
+  border-bottom:1px solid var(--b1);background:var(--bg);}
+.fb{font-size:.52rem;padding:3px 8px;background:transparent;
+  border:1px solid var(--b2);color:var(--t2);cursor:pointer;transition:all .2s;}
+.fb.on{border-color:var(--acc);color:var(--acc);background:rgba(0,212,255,.07);}
+.fb:hover:not(.on){color:var(--t1);}
+
+/* ── COUNTRY BAR ────────────────────────────────────────── */
+.cbar{padding:6px 9px;display:flex;gap:4px;overflow-x:auto;
+  border-bottom:1px solid var(--b1);flex-shrink:0;}
+.cbar::-webkit-scrollbar{height:2px;}
+.cbar::-webkit-scrollbar-thumb{background:var(--b3);}
+.cb{font-size:.5rem;white-space:nowrap;padding:2px 8px;background:transparent;
+  border:1px solid var(--b2);color:var(--t2);cursor:pointer;flex-shrink:0;transition:all .2s;}
+.cb.on{border-color:var(--acc);color:var(--acc);background:rgba(0,212,255,.07);}
+
+/* ── NEWS LIST ──────────────────────────────────────────── */
+.nscroll{flex:1;overflow-y:auto;}
+.nscroll::-webkit-scrollbar{width:3px;}
+.nscroll::-webkit-scrollbar-thumb{background:var(--b3);}
+.ni{padding:10px 12px;border-bottom:1px solid var(--b1);cursor:pointer;
+  transition:background .15s;position:relative;}
+.ni::before{content:'';position:absolute;left:0;top:0;bottom:0;
+  width:2px;background:transparent;transition:background .2s;}
+.ni:hover{background:rgba(0,212,255,.03);}
+.ni:hover::before,.ni.on::before{background:var(--acc);}
+.ni.on{background:rgba(0,212,255,.07);}
+.ni.urg::before{background:var(--red)!important;}
+.ni-urg{font-family:var(--hd);font-size:.48rem;letter-spacing:2px;
+  color:var(--red);margin-bottom:3px;}
+.ni-title{font-size:.73rem;color:var(--t1);line-height:1.45;margin-bottom:4px;}
+.ni-meta{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:4px;}
+.nt{font-size:.5rem;padding:1px 6px;border:1px solid;}
+.nt.c{border-color:var(--red);color:#ff6666;background:rgba(255,43,43,.07);}
+.nt.m{border-color:#4488ff;color:#88aaff;background:rgba(68,136,255,.07);}
+.nt.k{border-color:var(--grn);color:#44ffaa;background:rgba(0,255,136,.07);}
+.nt.e{border-color:var(--gold);color:var(--gold);background:rgba(255,215,0,.07);}
+.ni-hora{font-size:.5rem;color:var(--t3);}
+.ni-src{font-size:.5rem;color:var(--t3);margin-top:2px;}
+.empty{padding:30px;text-align:center;color:var(--t3);font-size:.65rem;}
+
+/* ── TRACKER ────────────────────────────────────────────── */
+.tlist{flex:1;overflow-y:auto;padding:6px;}
+.tlist::-webkit-scrollbar{width:3px;}
+.tlist::-webkit-scrollbar-thumb{background:var(--b3);}
+.ti{background:rgba(0,212,255,.03);border:1px solid var(--b1);
+  padding:7px 10px;margin-bottom:5px;cursor:pointer;transition:background .2s;}
+.ti:hover{background:rgba(0,212,255,.07);}
+.ti-hd{display:flex;justify-content:space-between;align-items:center;margin-bottom:3px;}
+.ti-cs{font-family:var(--hd);font-size:.6rem;color:var(--acc);}
+.ti-tp{font-size:.5rem;color:var(--t2);}
+.ti-dt{font-size:.54rem;color:var(--t2);line-height:1.6;}
+.dot{width:7px;height:7px;border-radius:50%;display:inline-block;margin-right:4px;}
+
+/* ── DETAIL ─────────────────────────────────────────────── */
+.detempty{flex:1;display:flex;flex-direction:column;align-items:center;
+  justify-content:center;gap:10px;color:var(--t3);font-size:.6rem;text-align:center;padding:20px;}
+.detempty .ico{font-size:2rem;opacity:.2;}
+.detcard{padding:14px;overflow-y:auto;flex:1;}
+.detcard::-webkit-scrollbar{width:3px;}
+.detcard::-webkit-scrollbar-thumb{background:var(--b3);}
+.dt-type{font-family:var(--hd);font-size:.5rem;letter-spacing:2px;margin-bottom:6px;}
+.dt-title{font-size:.88rem;font-weight:500;color:#fff;line-height:1.5;margin-bottom:8px;}
+.dt-desc{font-size:.7rem;color:var(--t2);line-height:1.6;margin-bottom:10px;}
+.dt-row{display:flex;justify-content:space-between;padding:4px 0;
+  border-bottom:1px solid var(--b1);font-size:.58rem;}
+.dt-row span:first-child{color:var(--t3);}
+.dt-btn{display:block;margin-top:12px;text-align:center;font-family:var(--hd);
+  font-size:.52rem;letter-spacing:1px;padding:8px;background:rgba(0,212,255,.07);
+  border:1px solid var(--acc);color:var(--acc);text-decoration:none;transition:all .2s;}
+.dt-btn:hover{background:var(--acc);color:var(--bg);}
+
+/* ── CHAT ───────────────────────────────────────────────── */
+.cwrap{flex:1;display:flex;flex-direction:column;overflow:hidden;}
+.cmsgs{flex:1;overflow-y:auto;padding:8px;display:flex;flex-direction:column;gap:6px;}
+.cmsgs::-webkit-scrollbar{width:3px;}
+.cmsgs::-webkit-scrollbar-thumb{background:var(--b3);}
+.cm{background:var(--p2);border:1px solid var(--b1);
+  border-radius:0 6px 6px 6px;padding:6px 9px;max-width:92%;
+  animation:fadein .3s ease;}
+@keyframes fadein{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+.cm.own{align-self:flex-end;border-radius:6px 0 6px 6px;background:rgba(0,212,255,.07);}
+.cm-nick{font-size:.52rem;color:var(--acc);margin-bottom:2px;}
+.cm.own .cm-nick{color:var(--grn);}
+.cm-text{font-size:.68rem;color:var(--t1);line-height:1.4;}
+.cm-time{font-size:.5rem;color:var(--t3);margin-top:2px;text-align:right;}
+.cform{padding:8px;border-top:1px solid var(--b1);display:flex;gap:5px;}
+.cin{flex:1;background:var(--p3);border:1px solid var(--b1);color:var(--t1);
+  font-family:var(--mono);font-size:.65rem;padding:6px 8px;outline:none;transition:border .2s;}
+.cin:focus{border-color:var(--b3);}
+.cbtn{font-family:var(--hd);font-size:.5rem;padding:6px 10px;
+  background:rgba(0,212,255,.07);border:1px solid var(--acc);
+  color:var(--acc);cursor:pointer;transition:all .2s;}
+.cbtn:hover{background:var(--acc);color:var(--bg);}
+.nkwrap{padding:20px;display:flex;flex-direction:column;gap:10px;}
+.nkwrap label{font-size:.6rem;color:var(--t2);}
+.nkin{background:var(--p3);border:1px solid var(--b2);color:var(--t1);
+  font-family:var(--mono);font-size:.7rem;padding:8px 10px;outline:none;width:100%;}
+.nkbtn{font-family:var(--hd);font-size:.55rem;letter-spacing:1px;padding:9px;
+  background:rgba(0,212,255,.07);border:1px solid var(--acc);
+  color:var(--acc);cursor:pointer;transition:all .2s;}
+.nkbtn:hover{background:var(--acc);color:var(--bg);}
+
+/* ── SOURCES ────────────────────────────────────────────── */
+.srclist{flex:1;overflow-y:auto;padding:8px;}
+.srclist::-webkit-scrollbar{width:3px;}
+.srclist::-webkit-scrollbar-thumb{background:var(--b3);}
+.sri{background:var(--p3);border:1px solid var(--b1);padding:7px 10px;margin-bottom:4px;}
+.sri-name{font-family:var(--hd);font-size:.58rem;color:var(--acc);}
+.sri-row{display:flex;justify-content:space-between;margin-top:3px;font-size:.52rem;color:var(--t2);}
+.ok{color:var(--grn);}
+.err{color:var(--red);}
+
+/* ── POPUP ──────────────────────────────────────────────── */
+.leaflet-popup-content-wrapper{
+  background:var(--p2)!important;border:1px solid var(--b3)!important;
+  border-radius:0!important;box-shadow:0 4px 30px rgba(0,0,0,.9)!important;
+  max-width:270px!important;}
+.leaflet-popup-tip-container{display:none;}
+.pu-type{font-family:var(--hd);font-size:.48rem;letter-spacing:2px;margin-bottom:5px;}
+.pu-title{font-size:.78rem;font-weight:500;color:#fff;line-height:1.4;margin-bottom:6px;}
+.pu-desc{font-size:.66rem;color:var(--t2);line-height:1.4;margin-bottom:7px;}
+.pu-foot{display:flex;justify-content:space-between;font-size:.52rem;color:var(--t3);}
+.pu-btns{display:flex;gap:5px;margin-top:8px;}
+.pu-btn{flex:1;text-align:center;font-family:var(--hd);font-size:.48rem;
+  padding:5px;background:rgba(0,212,255,.07);border:1px solid var(--acc);
+  color:var(--acc);text-decoration:none;cursor:pointer;transition:all .2s;}
+.pu-btn:hover{background:var(--acc);color:var(--bg);}
+
+/* ── STATUSBAR ──────────────────────────────────────────── */
+footer{height:23px;flex-shrink:0;background:var(--bg);border-top:1px solid var(--b1);
+  display:flex;align-items:center;gap:18px;padding:0 14px;font-size:.56rem;color:var(--t3);}
+footer b{color:var(--acc);}
+
+/* ── LOADING OVERLAY ────────────────────────────────────── */
+#ld{position:fixed;inset:0;background:var(--bg);z-index:9999;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;}
+.ldring{width:50px;height:50px;border:2px solid var(--b2);
+  border-top-color:var(--acc);border-radius:50%;animation:spin 1s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg)}}
+#ld p{font-family:var(--hd);font-size:.6rem;letter-spacing:2px;color:var(--t2);}
+#ld small{font-size:.52rem;color:var(--t3);}
+</style>
+</head>
+<body>
+<div id="ld">
+  <div class="ldring"></div>
+  <p>GEOECONORBIT INTEL</p>
+  <small id="ldtxt">Conectando fuentes...</small>
+</div>
+
+<header>
+  <div class="logo">
+    <div class="pulse"></div>
+    <h1>Geo<s>Econ</s>Orbit</h1>
+    <span class="livetag">LIVE</span>
+  </div>
+  <div class="hdstats">
+    <span>EVENTOS: <b id="s-ev">—</b></span>
+    <span>EN MAPA: <b id="s-mk">—</b></span>
+    <span>AVIONES: <b id="s-ac">—</b></span>
+    <span>SYNC: <b id="s-hr">—</b></span>
+  </div>
+  <a href="https://t.me/GeoEconOrbit" target="_blank" class="tgbtn">📢 TELEGRAM</a>
+</header>
+
+<div class="main">
+  <div id="map"></div>
+
+  <aside>
+    <div class="tabs">
+      <button class="tab on" onclick="setTab('news',this)">NOTICIAS</button>
+      <button class="tab" onclick="setTab('track',this)">TRACKING</button>
+      <button class="tab" onclick="setTab('det',this)">DETALLE</button>
+      <button class="tab" onclick="setTab('chat',this)">CHAT</button>
+      <button class="tab" onclick="setTab('src',this)">FUENTES</button>
+    </div>
+
+    <!-- NOTICIAS -->
+    <div class="tc on" id="tc-news">
+      <div class="fbar">
+        <button class="fb on" onclick="setF('todos',this)">TODOS</button>
+        <button class="fb" onclick="setF('conflicto',this)">⚔ CONF</button>
+        <button class="fb" onclick="setF('militar',this)">✈ MIL</button>
+        <button class="fb" onclick="setF('mercados',this)">📊 MKT</button>
+        <button class="fb" onclick="setF('urgente',this)">🚨 URG</button>
+      </div>
+      <div class="cbar" id="cbar"><button class="cb on" onclick="setPais('',this)">🌍 TODOS</button></div>
+      <div class="nscroll" id="nlist"><div class="empty">Cargando...</div></div>
+    </div>
+
+    <!-- TRACKING -->
+    <div class="tc" id="tc-track">
+      <div class="fbar">
+        <button class="fb on" onclick="setTF('todos',this)">TODOS</button>
+        <button class="fb" onclick="setTF('militar',this)">🪖 MIL</button>
+        <button class="fb" onclick="setTF('civil',this)">✈ CIV</button>
+      </div>
+      <div class="tlist" id="tlist"><div class="empty">Cargando aviones...</div></div>
+    </div>
+
+    <!-- DETALLE -->
+    <div class="tc" id="tc-det">
+      <div class="detempty" id="detempty"><div class="ico">🎯</div><div>Selecciona noticia<br>o punto del mapa</div></div>
+      <div class="detcard" id="detcard" style="display:none"></div>
+    </div>
+
+    <!-- CHAT -->
+    <div class="tc" id="tc-chat">
+      <div class="nkwrap" id="nkwrap">
+        <label>IDENTIFICADOR</label>
+        <input class="nkin" id="nkin" placeholder="Ej: Analista_01" maxlength="20"/>
+        <button class="nkbtn" onclick="setNick()">ENTRAR AL CHAT →</button>
+      </div>
+      <div class="cwrap" id="cwrap" style="display:none">
+        <div class="cmsgs" id="cmsgs"></div>
+        <div class="cform">
+          <input class="cin" id="cin" placeholder="Mensaje..." maxlength="200"
+            onkeydown="if(event.key==='Enter')sendMsg()"/>
+          <button class="cbtn" onclick="sendMsg()">ENV</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- FUENTES -->
+    <div class="tc" id="tc-src">
+      <div class="srclist" id="srclist"></div>
+    </div>
+  </aside>
+</div>
+
+<footer>
+  <span>GEOECONORBIT v3.1</span><span>|</span>
+  <span>FUENTES: <b>Redis · OpenSky · GDELT · RSS</b></span><span>|</span>
+  <span>ACT: <b id="s-cd">60s</b></span>
+</footer>
+
+<script>
+var CFG={
+  redis:'https://loved-wallaby-71460.upstash.io',
+  token:'gQAAAAAAARckAAIncDIwNDA1YjBlMDJlMDI0YWQwYjE1YWM4YWUzODRjYmU0N3AyNzE0NjA',
+  tg:'https://t.me/GeoEconOrbit',
+  mapKey:'geobot:noticias_mapa',
+  chatKey:'geobot:chat',
+  tick:60,
+};
+
+var ZONES={
+  ukraine:[48.37,31.16],russia:[55.75,37.61],kyiv:[50.45,30.52],
+  kharkiv:[50.0,36.23],crimea:[45.3,34.0],donbas:[48.0,38.0],
+  gaza:[31.35,34.30],israel:[31.77,35.21],'west bank':[31.9,35.2],
+  'tel aviv':[32.07,34.78],jerusalem:[31.77,35.21],
+  iran:[32.43,53.68],tehran:[35.68,51.38],isfahan:[32.65,51.67],
+  syria:[34.80,38.99],damascus:[33.51,36.29],aleppo:[36.20,37.15],
+  yemen:[15.55,48.51],houthi:[14.53,43.73],sanaa:[15.35,44.20],
+  'red sea':[20.0,38.0],'mar rojo':[20.0,38.0],
+  lebanon:[33.88,35.50],beirut:[33.88,35.50],
+  iraq:[33.22,43.67],baghdad:[33.34,44.40],
+  taiwan:[23.70,121.0],china:[35.86,104.19],beijing:[39.90,116.39],
+  'north korea':[40.33,127.51],
+  'persian gulf':[27.0,52.0],'strait of hormuz':[26.5,56.5],
+  'saudi arabia':[24.68,46.72],
+  sudan:[15.55,32.53],somalia:[5.15,46.20],
+  pakistan:[30.37,69.34],afghanistan:[33.93,67.71],
+  turkey:[38.96,35.24],egypt:[26.82,30.80],
+  libya:[26.33,17.23],'black sea':[43.0,34.0],
+  donetsk:[48.02,37.80],luhansk:[48.57,39.34],
+  'gulf of aden':[12.0,48.0],
+};
+
+var PAIS_LABEL={
+  ukraine:'🇺🇦 UCRANIA',russia:'🇷🇺 RUSIA',israel:'🇮🇱 ISRAEL',
+  gaza:'🇵🇸 GAZA',iran:'🇮🇷 IRÁN',syria:'🇸🇾 SIRIA',
+  yemen:'🇾🇪 YEMEN',lebanon:'🇱🇧 LÍBANO',iraq:'🇮🇶 IRAK',
+  taiwan:'🇹🇼 TAIWÁN',china:'🇨🇳 CHINA','north korea':'🇰🇵 COREA N.',
+  'red sea':'🌊 MAR ROJO','persian gulf':'🌊 GOLFO P.',
+  'saudi arabia':'🇸🇦 ARABIA S.',sudan:'🇸🇩 SUDÁN',
+  turkey:'🇹🇷 TURQUÍA',egypt:'🇪🇬 EGIPTO',
+};
+
+var SRCS=[
+  {n:'GeoEconOrbit Bot',t:'Redis',ok:true},
+  {n:'Reuters World',t:'RSS',ok:true},
+  {n:'Al Jazeera',t:'RSS',ok:true},
+  {n:'BBC World',t:'RSS',ok:true},
+  {n:'Iran International',t:'RSS',ok:true},
+  {n:'Meduza EN',t:'RSS',ok:true},
+  {n:'Bellingcat',t:'RSS',ok:true},
+  {n:'Defense News',t:'RSS',ok:true},
+  {n:'Breaking Defense',t:'RSS',ok:true},
+  {n:'The War Zone',t:'RSS',ok:true},
+  {n:'GDELT Project',t:'API',ok:true},
+  {n:'OpenSky Network',t:'API',ok:true},
+];
+
+var S={
+  news:[],aircraft:[],
+  filtro:'todos',pais:'',tfiltro:'todos',
+  sel:null,markers:[],acMk:[],
+  nick:localStorage.getItem('geo_nick')||null,
+  seenH:new Set(),cd:60,
+};
+
+// ── MAP ────────────────────────────────────────────────────
+var map=L.map('map',{center:[25,15],zoom:2,minZoom:1,zoomControl:true,attributionControl:false});
+L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png',{
+  subdomains:'abcd',maxZoom:19}).addTo(map);
+L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_only_labels/{z}/{x}/{y}{r}.png',{
+  subdomains:'abcd',maxZoom:19,pane:'shadowPane'}).addTo(map);
+L.control.attribution({prefix:'© OSM © CARTO'}).addTo(map);
+
+// ── DEDUP ──────────────────────────────────────────────────
+function h32(s){var h=5381;for(var i=0;i<s.length;i++)h=((h<<5)+h)^s.charCodeAt(i);return(h>>>0).toString(36);}
+function isDup(n){var k=h32((n.titulo||'').toLowerCase().replace(/\W/g,'').slice(0,80));if(S.seenH.has(k))return true;S.seenH.add(k);return false;}
+
+// ── COORDS ────────────────────────────────────────────────
+function getCoords(n){
+  if(n.coords&&n.coords.length===2&&n.coords[0]!==0) return n.coords;
+  var t=((n.titulo||'')+(n.desc||'')).toLowerCase();
+  var ks=Object.keys(ZONES).sort(function(a,b){return b.length-a.length;});
+  for(var i=0;i<ks.length;i++) if(t.indexOf(ks[i])!==-1) return ZONES[ks[i]];
+  return null;
+}
+function getPais(n){
+  if(n.pais) return n.pais;
+  var t=((n.titulo||'')+(n.desc||'')).toLowerCase();
+  var ks=Object.keys(ZONES).sort(function(a,b){return b.length-a.length;});
+  for(var i=0;i<ks.length;i++) if(t.indexOf(ks[i])!==-1) return ks[i];
+  return '';
+}
+function getTipo(t,d){
+  var s=((t||'')+(d||'')).toLowerCase();
+  if(/attack|strike|bomb|missile|kill|invasion|offensive|shelling|blast/.test(s)) return 'conflicto';
+  if(/military|aircraft|warship|nato|bomber|fleet|navy|troops/.test(s)) return 'militar';
+  if(/oil|gold|opec|sanction|market|price|crude|inflation/.test(s)) return 'mercados';
+  return 'conflicto';
+}
+
+// ── MARKERS ───────────────────────────────────────────────
+function mkIcon(tipo,urg,sz){
+  var c={conflicto:'#ff2b2b',militar:'#4488ff',mercados:'#00ff88',escalada:'#ffd700'}[tipo]||'#ff8800';
+  sz=sz||(urg?16:11);
+  var glow=urg?'0 0 16px '+c+',0 0 4px '+c:'0 0 8px '+c;
+  var anim=urg?'animation:beat 1.2s infinite':'';
+  return L.divIcon({className:'',iconSize:[sz,sz],iconAnchor:[sz/2,sz/2],
+    html:'<div style="width:'+sz+'px;height:'+sz+'px;background:'+c+
+      ';border:2px solid rgba(255,255,255,.55);border-radius:50%;box-shadow:'+glow+';'+anim+'"></div>'});
+}
+function acIcon(mil){
+  var c=mil?'#ff7700':'#00aaff';
+  return L.divIcon({className:'',iconSize:[8,8],iconAnchor:[4,4],
+    html:'<div style="width:8px;height:8px;background:'+c+
+      ';border:1px solid rgba(255,255,255,.4);border-radius:50%;box-shadow:0 0 6px '+c+'"></div>'});
+}
+
+// ── RENDER MARKERS ────────────────────────────────────────
+function renderMarkers(){
+  S.markers.forEach(function(m){map.removeLayer(m);});
+  S.acMk.forEach(function(m){map.removeLayer(m);});
+  S.markers=[]; S.acMk=[];
+
+  // Agrupar por coords
+  var grupos={};
+  getFiltradas().forEach(function(n){
+    var c=getCoords(n); if(!c) return;
+    var k=Math.round(c[0]*4)/4+','+Math.round(c[1]*4)/4;
+    if(!grupos[k]) grupos[k]={c:c,list:[],urg:false,tipo:'conflicto'};
+    grupos[k].list.push(n);
+    if(n.urgente){grupos[k].urg=true;grupos[k].tipo=n.tipo;}
+  });
+
+  Object.values(grupos).forEach(function(g){
+    var n=g.list[0];
+    var extra=g.list.length>1?' <b>+'+( g.list.length-1)+'</b>':'';
+    var col=n.tipo==='conflicto'?'var(--red)':n.tipo==='militar'?'#66aaff':'var(--grn)';
+    var pop='<div class="pu-type" style="color:'+col+'">'+tipoLbl(n.tipo).toUpperCase()+extra+'</div>'+
+      '<div class="pu-title">'+(n.urgente?'🚨 ':'')+esc(n.titulo)+'</div>'+
+      (n.desc?'<div class="pu-desc">'+esc(n.desc.slice(0,120))+'…</div>':'')+
+      '<div class="pu-foot"><span>'+esc(n.fuente||'')+'</span><span>'+n.hora+'</span></div>'+
+      '<div class="pu-btns"><span class="pu-btn" onclick="showDet(\''+esc(n.titulo).replace(/'/g,'&#39;')+'\')">DETALLE</span>'+
+      '<a class="pu-btn" href="'+CFG.tg+'" target="_blank">TELEGRAM</a></div>';
+    var mk=L.marker(g.c,{icon:mkIcon(g.tipo,g.urg)}).addTo(map).bindPopup(pop,{maxWidth:270});
+    (function(noticia){mk.on('click',function(){selec(noticia);});})(n);
+    S.markers.push(mk);
+  });
+
+  // Aircraft
+  var acShow=S.aircraft.filter(function(a){
+    if(S.tfiltro==='militar') return a.mil;
+    if(S.tfiltro==='civil') return !a.mil;
+    return true;
+  });
+  acShow.forEach(function(a){
+    if(!a.lat||!a.lon) return;
+    var mk=L.marker([a.lat,a.lon],{icon:acIcon(a.mil)}).addTo(map);
+    mk.bindTooltip('<b>'+(a.cs||a.icao)+'</b><br>'+a.country+' | '+(a.alt||0)+' ft',
+      {className:'',direction:'top',offset:[0,-5]});
+    (function(ac){mk.on('click',function(){showAcDet(ac);});})(a);
+    S.acMk.push(mk);
+  });
+
+  document.getElementById('s-mk').textContent=S.markers.length;
+}
+
+// ── FETCH NEWS ────────────────────────────────────────────
+async function fetchNews(){
+  var items=[];
+  document.getElementById('ldtxt').textContent='Cargando noticias...';
+  try{
+    var r=await fetch(CFG.redis+'/lrange/'+CFG.mapKey+'/0/199',{headers:{Authorization:'Bearer '+CFG.token}});
+    var d=await r.json();
+    (d.result||[]).forEach(function(s){try{items.push(JSON.parse(s));}catch(e){}});
+  }catch(e){}
+
+  try{
+    var g=await fetch('https://api.gdeltproject.org/api/v2/doc/doc?query=war+conflict+attack+iran+ukraine+israel+military&mode=artlist&maxrecords=20&sort=DateDesc&format=json&timespan=120min',
+      {signal:AbortSignal.timeout(8000)});
+    var gd=await g.json();
+    (gd.articles||[]).forEach(function(a){
+      if(!a.title) return;
+      var coords=null;
+      if(a.lat&&a.lon) coords=[parseFloat(a.lat),parseFloat(a.lon)];
+      items.push({id:h32(a.title),titulo:a.title,desc:a.title,
+        fuente:'GDELT/'+((a.domain||'').split('.')[0]),
+        hora:new Date().toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'}),
+        tipo:getTipo(a.title,''),urgente:/BREAKING|URGENT/i.test(a.title),coords:coords});
+    });
+  }catch(e){}
+
+  S.seenH.clear();
+  S.news=items.filter(function(n){
+    if(!n.titulo) return false;
+    if(!n.tipo) n.tipo=getTipo(n.titulo,n.desc||'');
+    if(!n.pais) n.pais=getPais(n);
+    return !isDup(n);
+  }).sort(function(a,b){return(b.urgente?1:0)-(a.urgente?1:0);});
+  document.getElementById('s-ev').textContent=S.news.length;
+}
+
+// ── FETCH AIRCRAFT ────────────────────────────────────────
+async function fetchAircraft(){
+  document.getElementById('ldtxt').textContent='Cargando aviones...';
+  try{
+    var r=await fetch('https://opensky-network.org/api/states/all',
+      {signal:AbortSignal.timeout(10000)});
+    var d=await r.json();
+    var MIL=['RCH','CHAOS','SPAR','USAF','PAT','BAF','GAF','SAF','HKY','NATO','USMC','USN'];
+    S.aircraft=(d.states||[]).filter(function(s){return s[5]&&s[6]&&s[8]===false;})
+      .slice(0,300).map(function(s){
+        var cs=(s[1]||'').trim();
+        var mil=MIL.some(function(p){return cs.startsWith(p);})||
+          (s[0]||'').toUpperCase().startsWith('AE');
+        return{icao:s[0],cs:cs,country:s[2],lon:s[5],lat:s[6],
+          alt:Math.round(s[7]||0),vel:Math.round(s[9]||0),mil:mil};
+      });
+    document.getElementById('s-ac').textContent=S.aircraft.length;
+  }catch(e){S.aircraft=[];}
+}
+
+// ── RENDER SIDEBAR NEWS ───────────────────────────────────
+function getFiltradas(){
+  return S.news.filter(function(n){
+    if(S.filtro==='urgente') return n.urgente;
+    if(S.filtro!=='todos') return n.tipo===S.filtro;
+    if(S.pais) return n.pais===S.pais;
+    return true;
+  });
+}
+
+function renderNews(){
+  var lista=document.getElementById('nlist');
+  var f=getFiltradas();
+  if(!f.length){lista.innerHTML='<div class="empty">Sin resultados</div>';return;}
+  lista.innerHTML='';
+  f.forEach(function(n){
+    var div=document.createElement('div');
+    div.className='ni'+(n.urgente?' urg':'')+(n===S.sel?' on':'');
+    var tc=n.tipo==='conflicto'?'c':n.tipo==='militar'?'m':n.tipo==='escalada'?'e':'k';
+    div.innerHTML=(n.urgente?'<div class="ni-urg">⚠ URGENTE</div>':'')+
+      '<div class="ni-title">'+esc(n.titulo)+'</div>'+
+      '<div class="ni-meta"><span class="nt '+tc+'">'+tipoLbl(n.tipo)+'</span>'+
+      (n.pais&&PAIS_LABEL[n.pais]?'<span style="font-size:.5rem;color:var(--t3)">'+PAIS_LABEL[n.pais]+'</span>':'')+
+      '<span class="ni-hora">'+n.hora+'</span></div>'+
+      '<div class="ni-src">'+esc(n.fuente||'')+'</div>';
+    div.onclick=function(){selec(n);};
+    lista.appendChild(div);
+  });
+}
+
+function renderCountryBar(){
+  var bar=document.getElementById('cbar');
+  var pm={};
+  S.news.forEach(function(n){if(n.pais&&PAIS_LABEL[n.pais]){pm[n.pais]=(pm[n.pais]||0)+1;}});
+  bar.innerHTML='<button class="cb'+(S.pais===''?' on':'')+'" onclick="setPais(\'\',this)">🌍 TODOS</button>';
+  Object.keys(pm).sort(function(a,b){return pm[b]-pm[a];}).slice(0,10).forEach(function(p){
+    var btn=document.createElement('button');
+    btn.className='cb'+(S.pais===p?' on':'');
+    btn.textContent=(PAIS_LABEL[p]||p.toUpperCase())+' ('+pm[p]+')';
+    btn.onclick=function(){setPais(p,this);};
+    bar.appendChild(btn);
+  });
+}
+
+function renderTracker(){
+  var lista=document.getElementById('tlist');
+  var ac=S.aircraft.filter(function(a){
+    if(S.tfiltro==='militar') return a.mil;
+    if(S.tfiltro==='civil') return !a.mil;
+    return true;
+  }).slice(0,60);
+  if(!ac.length){lista.innerHTML='<div class="empty">Sin datos</div>';return;}
+  lista.innerHTML='';
+  ac.forEach(function(a){
+    var div=document.createElement('div');
+    div.className='ti';
+    var c=a.mil?'#ff7700':'#00aaff';
+    div.innerHTML='<div class="ti-hd">'+
+      '<span class="ti-cs"><span class="dot" style="background:'+c+'"></span>'+esc(a.cs||a.icao)+'</span>'+
+      '<span class="ti-tp">'+(a.mil?'🪖 MIL':'✈ CIV')+'</span></div>'+
+      '<div class="ti-dt">'+esc(a.country)+' | '+(a.alt||0)+' ft | '+(a.vel||0)+' kt</div>';
+    div.onclick=function(){showAcDet(a);};
+    lista.appendChild(div);
+  });
+}
+
+function renderSources(){
+  var l=document.getElementById('srclist');
+  l.innerHTML='';
+  SRCS.forEach(function(s){
+    var d=document.createElement('div');
+    d.className='sri';
+    d.innerHTML='<div class="sri-name">'+s.n+'</div>'+
+      '<div class="sri-row"><span>'+s.t+'</span><span class="ok">● ONLINE</span></div>';
+    l.appendChild(d);
+  });
+}
+
+// ── SELECCIONAR / DETALLE ─────────────────────────────────
+window._detData={};
+window.showDet=function(titulo){
+  var n=S.news.find(function(x){return x.titulo===titulo;});
+  if(n) selec(n,false);
+};
+function selec(n,center){
+  S.sel=n;
+  setTab('det',null);
+  document.getElementById('detempty').style.display='none';
+  var card=document.getElementById('detcard');
+  card.style.display='block';
+  var col=n.tipo==='conflicto'?'var(--red)':n.tipo==='militar'?'#66aaff':'var(--grn)';
+  var pais=n.pais&&PAIS_LABEL[n.pais]?PAIS_LABEL[n.pais]:'—';
+  card.innerHTML='<div class="dt-type" style="color:'+col+'">'+tipoLbl(n.tipo).toUpperCase()+'</div>'+
+    '<div class="dt-title">'+(n.urgente?'🚨 ':'')+esc(n.titulo)+'</div>'+
+    (n.desc?'<div class="dt-desc">'+esc(n.desc)+'</div>':'')+
+    '<div class="dt-row"><span>REGIÓN</span><span>'+pais+'</span></div>'+
+    '<div class="dt-row"><span>FUENTE</span><span>'+esc(n.fuente||'—')+'</span></div>'+
+    '<div class="dt-row"><span>HORA</span><span>'+n.hora+'</span></div>'+
+    '<div class="dt-row"><span>URGENTE</span><span>'+(n.urgente?'SÍ ⚠':'NO')+'</span></div>'+
+    '<a href="'+CFG.tg+'" target="_blank" class="dt-btn">📢 VER CANAL COMPLETO</a>';
+  if(center!==false){
+    var c=getCoords(n);
+    if(c) map.setView(c,Math.max(map.getZoom(),5),{animate:true});
+  }
+  renderNews();
+}
+
+function showAcDet(a){
+  setTab('det',null);
+  document.getElementById('detempty').style.display='none';
+  var card=document.getElementById('detcard');
+  card.style.display='block';
+  var col=a.mil?'var(--ora)':'var(--acc)';
+  card.innerHTML='<div class="dt-type" style="color:'+col+'">'+(a.mil?'🪖 AERONAVE MILITAR':'✈ AERONAVE CIVIL')+'</div>'+
+    '<div class="dt-title">'+esc(a.cs||a.icao||'—')+'</div>'+
+    '<div class="dt-row"><span>ICAO</span><span>'+esc(a.icao)+'</span></div>'+
+    '<div class="dt-row"><span>PAÍS</span><span>'+esc(a.country||'—')+'</span></div>'+
+    '<div class="dt-row"><span>ALTITUD</span><span>'+(a.alt||0)+' ft</span></div>'+
+    '<div class="dt-row"><span>VELOCIDAD</span><span>'+(a.vel||0)+' kt</span></div>'+
+    '<div class="dt-row"><span>POSICIÓN</span><span>'+a.lat.toFixed(2)+'°N '+a.lon.toFixed(2)+'°E</span></div>';
+}
+
+// ── UI CONTROLS ───────────────────────────────────────────
+window.setTab=function(t,btn){
+  document.querySelectorAll('.tab').forEach(function(b){b.classList.remove('on');});
+  document.querySelectorAll('.tc').forEach(function(c){c.classList.remove('on');});
+  document.getElementById('tc-'+t).classList.add('on');
+  if(btn) btn.classList.add('on');
+  else{var m={'news':0,'track':1,'det':2,'chat':3,'src':4};
+    var tabs=document.querySelectorAll('.tab');
+    if(m[t]!==undefined) tabs[m[t]].classList.add('on');}
+  if(t==='chat'&&S.nick) loadChat();
+};
+window.setF=function(f,btn){
+  S.filtro=f;
+  document.querySelectorAll('#tc-news .fbar .fb').forEach(function(b){b.classList.remove('on');});
+  btn.classList.add('on');
+  renderNews(); renderMarkers();
+};
+window.setPais=function(p,btn){
+  S.pais=p;
+  document.querySelectorAll('.cb').forEach(function(b){b.classList.remove('on');});
+  btn.classList.add('on');
+  renderNews(); renderMarkers();
+  if(p&&ZONES[p]) map.setView(ZONES[p],5,{animate:true});
+};
+window.setTF=function(f,btn){
+  S.tfiltro=f;
+  document.querySelectorAll('#tc-track .fbar .fb').forEach(function(b){b.classList.remove('on');});
+  btn.classList.add('on');
+  renderTracker(); renderMarkers();
+};
+function tipoLbl(t){return{conflicto:'⚔ Conflicto',militar:'✈ Militar',mercados:'📊 Mercados',escalada:'⚠ Escalada'}[t]||'📍';}
+function esc(s){return(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+
+// ── CHAT ─────────────────────────────────────────────────
+if(S.nick){document.getElementById('nkwrap').style.display='none';document.getElementById('cwrap').style.display='flex';}
+window.setNick=function(){
+  var v=document.getElementById('nkin').value.trim().slice(0,20);
+  if(!v) return;
+  S.nick=v; localStorage.setItem('geo_nick',v);
+  document.getElementById('nkwrap').style.display='none';
+  document.getElementById('cwrap').style.display='flex';
+  loadChat(); setInterval(loadChat,5000);
+};
+async function loadChat(){
+  try{
+    var r=await fetch(CFG.redis+'/lrange/'+CFG.chatKey+'/0/29',{headers:{Authorization:'Bearer '+CFG.token}});
+    var d=await r.json();
+    var msgs=(d.result||[]).map(function(s){try{return JSON.parse(s);}catch(e){return null;}}).filter(Boolean).reverse();
+    var c=document.getElementById('cmsgs');
+    var bot=c.scrollTop+c.clientHeight>=c.scrollHeight-10;
+    c.innerHTML='';
+    msgs.forEach(function(m){
+      var div=document.createElement('div');
+      div.className='cm'+(m.nick===S.nick?' own':'');
+      div.innerHTML='<div class="cm-nick">'+esc(m.nick)+'</div><div class="cm-text">'+esc(m.text)+'</div><div class="cm-time">'+m.hora+'</div>';
+      c.appendChild(div);
+    });
+    if(bot) c.scrollTop=c.scrollHeight;
+  }catch(e){}
+}
+window.sendMsg=async function(){
+  var inp=document.getElementById('cin');
+  var txt=inp.value.trim().slice(0,200);
+  if(!txt||!S.nick) return;
+  inp.value='';
+  var msg=JSON.stringify({nick:S.nick,text:txt,hora:new Date().toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'})});
+  try{
+    await fetch(CFG.redis+'/pipeline',{method:'POST',headers:{Authorization:'Bearer '+CFG.token},
+      body:JSON.stringify([['lpush',CFG.chatKey,msg],['ltrim',CFG.chatKey,0,49],['expire',CFG.chatKey,86400]])});
+    loadChat();
+  }catch(e){}
+};
+
+// ── COUNTDOWN ─────────────────────────────────────────────
+setInterval(function(){
+  S.cd--;
+  document.getElementById('s-cd').textContent=Math.max(0,S.cd)+'s';
+  if(S.cd<=0){S.cd=CFG.tick;cargar();}
+},1000);
+setInterval(function(){fetchAircraft().then(function(){renderTracker();renderMarkers();});},30000);
+
+// ── INIT ──────────────────────────────────────────────────
+async function cargar(){
+  await Promise.all([fetchNews(),fetchAircraft()]);
+  renderCountryBar();
+  renderNews();
+  renderTracker();
+  renderMarkers();
+  renderSources();
+  document.getElementById('s-hr').textContent=new Date().toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'});
+}
+
+cargar().then(function(){
+  document.getElementById('ld').style.display='none';
+});
+if(S.nick){loadChat();setInterval(loadChat,5000);}
+</script>
+</body>
+</html>
