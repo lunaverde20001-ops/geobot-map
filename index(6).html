@@ -1,0 +1,790 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GeoEconOrbit — Intelligence Globe</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<script src="https://cesium.com/downloads/cesiumjs/releases/1.111/Build/Cesium/Cesium.js"></script>
+<link href="https://cesium.com/downloads/cesiumjs/releases/1.111/Build/Cesium/Widgets/widgets.css" rel="stylesheet"/>
+<style>
+:root{
+  --bg:#020912;--p1:#040d1a;--p2:#060f20;
+  --b1:#0d2040;--b2:#163050;--b3:#1e3e6e;
+  --acc:#00d4ff;--red:#ff2b2b;--grn:#00ff88;--gold:#ffd700;--ora:#ff8800;
+  --t1:#c8dff0;--t2:#5a7a9a;--t3:#2a4060;
+  --hd:'Orbitron',monospace;--mono:'Share Tech Mono',monospace;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100%;overflow:hidden;background:var(--bg);}
+body{display:flex;flex-direction:column;font-family:var(--mono);color:var(--t1);}
+body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:9990;
+  background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.03) 3px);}
+
+/* HEADER */
+header{height:46px;flex-shrink:0;display:flex;align-items:center;
+  justify-content:space-between;padding:0 16px;position:relative;z-index:500;
+  background:linear-gradient(90deg,#020912,#04101e 40%,#020912);}
+header::after{content:'';position:absolute;bottom:0;left:0;right:0;height:1px;
+  background:linear-gradient(90deg,transparent,var(--acc) 20%,var(--red) 50%,var(--acc) 80%,transparent);}
+.logo{display:flex;align-items:center;gap:10px;}
+.pulse{width:9px;height:9px;border-radius:50%;background:var(--acc);
+  box-shadow:0 0 10px var(--acc);animation:beat 2s infinite;}
+@keyframes beat{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.3;transform:scale(1.6)}}
+.logo h1{font-family:var(--hd);font-size:.78rem;font-weight:700;letter-spacing:3px;}
+.logo h1 s{color:var(--acc);text-decoration:none;}
+.livetag{font-size:.52rem;letter-spacing:2px;color:var(--red);
+  border:1px solid rgba(255,43,43,.35);padding:2px 8px;display:flex;align-items:center;gap:4px;}
+.livetag::before{content:'';width:5px;height:5px;border-radius:50%;
+  background:var(--red);animation:beat 1s infinite;}
+.hdstats{display:flex;gap:18px;font-size:.58rem;color:var(--t2);}
+.hdstats b{color:var(--acc);}
+.tgbtn{font-family:var(--hd);font-size:.52rem;letter-spacing:1px;padding:5px 12px;
+  border:1px solid var(--acc);color:var(--acc);text-decoration:none;
+  clip-path:polygon(6px 0%,100% 0%,calc(100% - 6px) 100%,0% 100%);transition:all .2s;}
+.tgbtn:hover{background:var(--acc);color:var(--bg);}
+
+/* LAYOUT */
+.main{display:flex;flex:1;overflow:hidden;position:relative;}
+#cesiumContainer{flex:1;position:relative;}
+
+/* Hide Cesium credits */
+.cesium-credit-container,.cesium-credit-logoContainer{display:none!important;}
+
+/* LAYER CONTROLS (top-left floating) */
+#layerPanel{position:absolute;top:12px;left:12px;z-index:400;
+  background:rgba(4,13,26,.92);border:1px solid var(--b3);
+  backdrop-filter:blur(6px);padding:10px;min-width:180px;}
+#layerPanel h3{font-family:var(--hd);font-size:.55rem;letter-spacing:2px;
+  color:var(--acc);margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid var(--b2);}
+.lyr{display:flex;align-items:center;gap:8px;padding:5px 0;cursor:pointer;
+  border-bottom:1px solid var(--b1);transition:background .15s;}
+.lyr:last-child{border-bottom:none;}
+.lyr:hover{background:rgba(0,212,255,.05);margin:0 -10px;padding-left:10px;padding-right:10px;}
+.lyr input{accent-color:var(--acc);width:13px;height:13px;cursor:pointer;}
+.lyr-icon{font-size:.9rem;width:20px;text-align:center;}
+.lyr-txt{font-size:.6rem;color:var(--t1);}
+.lyr-cnt{font-size:.5rem;color:var(--t2);margin-left:auto;}
+
+/* DETAIL PANEL (right floating) */
+#detPanel{position:absolute;top:12px;right:12px;z-index:400;width:300px;
+  background:rgba(4,13,26,.95);border:1px solid var(--b3);
+  backdrop-filter:blur(6px);display:none;max-height:calc(100vh - 80px);overflow-y:auto;}
+#detPanel::-webkit-scrollbar{width:3px;}
+#detPanel::-webkit-scrollbar-thumb{background:var(--b3);}
+.det-hd{padding:10px 12px;border-bottom:1px solid var(--b2);
+  display:flex;justify-content:space-between;align-items:center;}
+.det-hd h3{font-family:var(--hd);font-size:.55rem;letter-spacing:2px;color:var(--acc);}
+.det-close{cursor:pointer;color:var(--t2);font-size:1rem;line-height:1;}
+.det-close:hover{color:var(--red);}
+.det-body{padding:12px;}
+.det-type{font-family:var(--hd);font-size:.48rem;letter-spacing:2px;margin-bottom:5px;}
+.det-title{font-size:.82rem;color:#fff;line-height:1.45;margin-bottom:8px;font-weight:500;}
+.det-desc{font-size:.68rem;color:var(--t2);line-height:1.6;margin-bottom:10px;}
+.det-row{display:flex;justify-content:space-between;padding:4px 0;
+  border-bottom:1px solid var(--b1);font-size:.58rem;}
+.det-row span:first-child{color:var(--t3);}
+.det-tg{display:block;margin-top:12px;text-align:center;font-family:var(--hd);
+  font-size:.52rem;letter-spacing:1px;padding:8px;background:rgba(0,212,255,.07);
+  border:1px solid var(--acc);color:var(--acc);text-decoration:none;transition:all .2s;}
+.det-tg:hover{background:var(--acc);color:var(--bg);}
+
+/* TRACKER (bottom floating) */
+#tracker{position:absolute;bottom:30px;left:12px;z-index:400;
+  background:rgba(4,13,26,.92);border:1px solid var(--b3);
+  backdrop-filter:blur(6px);min-width:320px;max-width:480px;}
+#tracker h3{font-family:var(--hd);font-size:.52rem;letter-spacing:2px;
+  color:var(--acc);padding:8px 12px;border-bottom:1px solid var(--b2);}
+#tracker-list{display:flex;gap:0;overflow-x:auto;max-height:80px;}
+#tracker-list::-webkit-scrollbar{height:3px;}
+#tracker-list::-webkit-scrollbar-thumb{background:var(--b3);}
+.tr-item{flex-shrink:0;padding:7px 12px;border-right:1px solid var(--b1);
+  cursor:pointer;transition:background .15s;min-width:140px;}
+.tr-item:hover{background:rgba(0,212,255,.06);}
+.tr-cs{font-family:var(--hd);font-size:.58rem;color:var(--acc);}
+.tr-dt{font-size:.52rem;color:var(--t2);margin-top:2px;}
+
+/* NEWS TICKER (bottom center) */
+#ticker{position:absolute;bottom:30px;left:50%;transform:translateX(-50%);
+  z-index:400;background:rgba(4,13,26,.9);border:1px solid var(--b2);
+  padding:5px 16px;max-width:600px;overflow:hidden;white-space:nowrap;}
+#ticker-inner{display:inline-block;animation:tickscroll 40s linear infinite;}
+@keyframes tickscroll{0%{transform:translateX(100%)}100%{transform:translateX(-100%)}}
+#ticker span{font-size:.58rem;color:var(--t1);}
+#ticker b{color:var(--red);font-family:var(--hd);font-size:.5rem;margin-right:6px;}
+
+/* FOOTER */
+footer{height:23px;flex-shrink:0;background:var(--bg);border-top:1px solid var(--b1);
+  display:flex;align-items:center;gap:18px;padding:0 14px;font-size:.56rem;color:var(--t3);z-index:500;}
+footer b{color:var(--acc);}
+
+/* LOADING */
+#ld{position:fixed;inset:0;background:var(--bg);z-index:9999;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;}
+.ldring{width:50px;height:50px;border:2px solid var(--b2);
+  border-top-color:var(--acc);border-radius:50%;animation:spin 1s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg)}}
+#ld p{font-family:var(--hd);font-size:.6rem;letter-spacing:2px;color:var(--t2);}
+#ldtxt{font-size:.52rem;color:var(--t3);}
+
+/* Commodity legend */
+#commLegend{position:absolute;bottom:30px;right:12px;z-index:400;
+  background:rgba(4,13,26,.92);border:1px solid var(--b3);
+  backdrop-filter:blur(6px);padding:10px;display:none;min-width:160px;}
+#commLegend h4{font-family:var(--hd);font-size:.5rem;letter-spacing:2px;
+  color:var(--gold);margin-bottom:8px;}
+.cl-item{display:flex;align-items:center;gap:7px;padding:3px 0;font-size:.56rem;color:var(--t1);}
+.cl-dot{width:10px;height:10px;border-radius:50%;}
+</style>
+</head>
+<body>
+<div id="ld"><div class="ldring"></div><p>GEOECONORBIT GLOBE</p><span id="ldtxt">Inicializando...</span></div>
+
+<header>
+  <div class="logo">
+    <div class="pulse"></div>
+    <h1>Geo<s>Econ</s>Orbit</h1>
+    <span class="livetag">LIVE</span>
+  </div>
+  <div class="hdstats">
+    <span>NOTICIAS: <b id="s-nw">—</b></span>
+    <span>ATAQUES: <b id="s-at">—</b></span>
+    <span>AVIONES: <b id="s-ac">—</b></span>
+    <span>SYNC: <b id="s-hr">—</b></span>
+  </div>
+  <a href="https://t.me/GeoEconOrbit" target="_blank" class="tgbtn">📢 TELEGRAM</a>
+</header>
+
+<div class="main">
+  <div id="cesiumContainer"></div>
+
+  <!-- LAYER PANEL -->
+  <div id="layerPanel">
+    <h3>⚙ CAPAS</h3>
+    <div class="lyr"><input type="checkbox" id="l-news" checked onchange="toggleLayer('news')"><span class="lyr-icon">📰</span><span class="lyr-txt">Noticias</span><span class="lyr-cnt" id="cnt-news">0</span></div>
+    <div class="lyr"><input type="checkbox" id="l-attack" checked onchange="toggleLayer('attack')"><span class="lyr-icon">💥</span><span class="lyr-txt">Ataques</span><span class="lyr-cnt" id="cnt-attack">0</span></div>
+    <div class="lyr"><input type="checkbox" id="l-mil" checked onchange="toggleLayer('mil')"><span class="lyr-icon">✈</span><span class="lyr-txt">Aviones</span><span class="lyr-cnt" id="cnt-mil">0</span></div>
+    <div class="lyr"><input type="checkbox" id="l-oil" onchange="toggleLayer('oil')"><span class="lyr-icon">🛢</span><span class="lyr-txt">Petróleo</span><span class="lyr-cnt"></span></div>
+    <div class="lyr"><input type="checkbox" id="l-gas" onchange="toggleLayer('gas')"><span class="lyr-icon">⛽</span><span class="lyr-txt">Gas Natural</span><span class="lyr-cnt"></span></div>
+    <div class="lyr"><input type="checkbox" id="l-wheat" onchange="toggleLayer('wheat')"><span class="lyr-icon">🌾</span><span class="lyr-txt">Trigo</span><span class="lyr-cnt"></span></div>
+    <div class="lyr"><input type="checkbox" id="l-gold" onchange="toggleLayer('gold')"><span class="lyr-icon">🥇</span><span class="lyr-txt">Oro / Metales</span><span class="lyr-cnt"></span></div>
+    <div class="lyr"><input type="checkbox" id="l-rare" onchange="toggleLayer('rare')"><span class="lyr-icon">💎</span><span class="lyr-txt">Tierras raras</span><span class="lyr-cnt"></span></div>
+    <div class="lyr"><input type="checkbox" id="l-ports" onchange="toggleLayer('ports')"><span class="lyr-icon">⚓</span><span class="lyr-txt">Puertos clave</span><span class="lyr-cnt"></span></div>
+  </div>
+
+  <!-- DETAIL PANEL -->
+  <div id="detPanel">
+    <div class="det-hd">
+      <h3 id="det-type-hd">DETALLE</h3>
+      <span class="det-close" onclick="closeDet()">✕</span>
+    </div>
+    <div class="det-body" id="det-body"></div>
+  </div>
+
+  <!-- TRACKER -->
+  <div id="tracker">
+    <h3>✈ TRACKING EN VIVO — <span id="tracker-update" style="color:var(--t2);font-weight:normal">actualizando...</span></h3>
+    <div id="tracker-list"><div style="padding:10px;font-size:.58rem;color:var(--t3)">Cargando OpenSky...</div></div>
+  </div>
+
+  <!-- COMMODITY LEGEND -->
+  <div id="commLegend">
+    <h4 id="comm-title">PETRÓLEO</h4>
+    <div id="comm-items"></div>
+  </div>
+
+  <!-- TICKER -->
+  <div id="ticker"><div id="ticker-inner"><span id="ticker-txt">Cargando noticias...</span></div></div>
+</div>
+
+<footer>
+  <span>GEOECONORBIT GLOBE v3.0</span><span>|</span>
+  <span>Fuentes: <b>Redis · OpenSky · GDELT · EIA</b></span><span>|</span>
+  <span>Refresh: <b id="s-cd">60s</b></span><span>|</span>
+  <span id="coord-display" style="color:var(--t3)">Mueve el ratón sobre el globo</span>
+</footer>
+
+<script>
+// ════════════════════════════════════════════════════════════
+Cesium.Ion.defaultAccessToken='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiJlYWE1OWUxNy1mMWZiLTQzYjYtYTQ0OS1kMWFjYmFkNjc4ZTcifQ.XcKpgANiY19MC4bdkd8Q-QyToRTIkDTjSHpGN9fGoXc';
+
+var CFG={
+  redis:'https://loved-wallaby-71460.upstash.io',
+  token:'gQAAAAAAARckAAIncDIwNDA1YjBlMDJlMDI0YWQwYjE1YWM4YWUzODRjYmU0N3AyNzE0NjA',
+  tg:'https://t.me/GeoEconOrbit',
+  mapKey:'geobot:noticias_mapa',
+  tick:60,
+};
+
+// ════════════════════════════════════════════════════════════
+//  DATOS DE MATERIAS PRIMAS (fuentes: EIA, USGS, FAO)
+// ════════════════════════════════════════════════════════════
+var COMMODITIES={
+  oil:[
+    {name:'Arabia Saudí — Ghawar',lat:25.12,lon:49.04,val:9.8,desc:'Mayor campo petrolífero del mundo. ~9.8 Mb/día'},
+    {name:'Irak — Basra',lat:30.5,lon:47.8,val:4.5,desc:'Sur de Irak. 4.5 Mb/día'},
+    {name:'Irán — Khuzestan',lat:31.3,lon:48.7,val:3.8,desc:'Mayor provincia petrolera de Irán'},
+    {name:'Rusia — Siberia Occidental',lat:62.0,lon:72.0,val:10.5,desc:'Yugansk, Samotlor. ~10.5 Mb/día'},
+    {name:'EE.UU. — Permian Basin',lat:31.9,lon:-102.5,val:6.0,desc:'Texas. Mayor productor mundial'},
+    {name:'Venezuela — Orinoco',lat:8.0,lon:-63.5,val:1.2,desc:'Mayores reservas probadas del mundo'},
+    {name:'Kuwait — Burgan',lat:28.9,lon:47.8,val:2.7,desc:'Segundo campo más grande del mundo'},
+    {name:'Emiratos — Abu Dhabi',lat:23.7,lon:54.0,val:3.0,desc:'ADNOC, reservas ~97Gb'},
+    {name:'Nigeria — Delta',lat:5.5,lon:6.0,val:1.4,desc:'Mayor productor de África'},
+    {name:'Libia — Sirtica',lat:29.0,lon:21.0,val:1.2,desc:'Reservas más grandes de África'},
+    {name:'Kazakhstan — Kashagan',lat:45.5,lon:52.8,val:1.8,desc:'Mayor descubrimiento en 30 años'},
+    {name:'México — Cantarell',lat:19.8,lon:-92.1,val:1.7,desc:'Offshore Golfo de México'},
+    {name:'Noruega — Mar del Norte',lat:61.0,lon:3.0,val:2.0,desc:'Johan Sverdrup, Ekofisk'},
+    {name:'Brasil — Pre-Sal',lat:-23.0,lon:-42.0,val:3.5,desc:'Offshore Santos, capas sub-sal'},
+    {name:'Azerbaiyán — Caspio',lat:40.0,lon:50.5,val:0.8,desc:'ACG field, BP'},
+  ],
+  gas:[
+    {name:'Qatar — North Dome',lat:26.0,lon:51.5,val:10.0,desc:'Mayor campo de gas del mundo. 900 tcf'},
+    {name:'Irán — South Pars',lat:27.0,lon:52.0,val:9.5,desc:'Comparte con Qatar el North Dome'},
+    {name:'Rusia — Yamal',lat:71.0,lon:68.0,val:8.0,desc:'Gazprom. Reservas ~10,000 bcm'},
+    {name:'Turkmenistán — Galkynysh',lat:37.3,lon:62.3,val:6.0,desc:'Segundo mayor campo del mundo'},
+    {name:'EE.UU. — Marcellus Shale',lat:41.0,lon:-77.0,val:7.0,desc:'Mayor yacimiento shale gas'},
+    {name:'Australia — LNG',lat:-22.0,lon:115.0,val:4.0,desc:'Gorgon, Wheatstone, Ichthys'},
+    {name:'Argelia — Hassi R\'Mel',lat:32.9,lon:3.3,val:3.0,desc:'Mayor campo de gas de África'},
+    {name:'Noruega — Mar del Norte',lat:60.0,lon:3.5,val:3.5,desc:'Troll, Sleipner'},
+  ],
+  wheat:[
+    {name:'Rusia — Stavropol-Krasnodar',lat:45.5,lon:42.0,val:10,desc:'Mayor exportador mundial. ~45 Mt/año'},
+    {name:'Ucrania — Steppe',lat:48.0,lon:34.0,val:8,desc:'\"Granero de Europa\". ~20 Mt/año'},
+    {name:'EE.UU. — Great Plains',lat:37.0,lon:-99.0,val:9,desc:'Kansas, Oklahoma, Texas. 47 Mt/año'},
+    {name:'India — Punjab',lat:30.5,lon:75.0,val:9,desc:'104 Mt/año. 2º productor mundial'},
+    {name:'China — North China Plain',lat:35.0,lon:115.0,val:10,desc:'134 Mt/año. Productor #1'},
+    {name:'Australia — Western Australia',lat:-30.0,lon:117.0,val:7,desc:'Gran exportador. ~25 Mt/año'},
+    {name:'Kazajistán — Estepa',lat:50.0,lon:67.0,val:6,desc:'~12 Mt/año'},
+    {name:'Canadá — Prairies',lat:51.0,lon:-107.0,val:8,desc:'Saskatchewan, Alberta. ~35 Mt/año'},
+    {name:'Francia — Beauce',lat:48.0,lon:1.8,val:7,desc:'Mayor productor de Europa Occidental'},
+    {name:'Argentina — Pampa',lat:-34.0,lon:-62.0,val:6,desc:'~20 Mt/año'},
+  ],
+  gold:[
+    {name:'China — Shandong',lat:36.5,lon:118.5,val:10,desc:'Mayor productor mundial. ~370 t/año'},
+    {name:'Australia — Kalgoorlie',lat:-30.7,lon:121.5,val:9,desc:'Super Pit. ~320 t/año'},
+    {name:'Rusia — Siberia Oriental',lat:55.0,lon:110.0,val:8,desc:'~330 t/año. 3º productor'},
+    {name:'EE.UU. — Nevada',lat:41.0,lon:-116.5,val:8,desc:'Carlin Trend, Cortez. ~180 t/año'},
+    {name:'Canadá — Ontario',lat:48.4,lon:-80.6,val:7,desc:'Red Lake, Kirkland Lake'},
+    {name:'Ghana — Ashanti',lat:6.7,lon:-1.6,val:7,desc:'Obuasi. Principal productor África Occ.'},
+    {name:'Sudáfrica — Witwatersrand',lat:-26.0,lon:27.0,val:6,desc:'Históricamente el mayor del mundo'},
+    {name:'México — Sonora',lat:29.0,lon:-110.0,val:6,desc:'Herradura. ~110 t/año'},
+    {name:'Indonesia — Grasberg',lat:-4.1,lon:137.1,val:7,desc:'Mayor mina de oro+cobre del mundo'},
+    {name:'Perú — Yanacocha',lat:-6.8,lon:-78.7,val:7,desc:'Newmont. ~650,000 oz/año'},
+  ],
+  rare:[
+    {name:'China — Bayan Obo',lat:41.8,lon:110.0,val:10,desc:'60% reservas mundiales. Nd, Ce, La'},
+    {name:'EE.UU. — Mountain Pass',lat:35.5,lon:-115.5,val:7,desc:'Único productor significativo en Occidente'},
+    {name:'Australia — Mount Weld',lat:-30.0,lon:122.9,val:7,desc:'Lynas Corp. REE + Uranio'},
+    {name:'Myanmar — Kachin',lat:26.0,lon:97.5,val:6,desc:'Creciente productor de REE pesadas'},
+    {name:'Brasil — Araxa',lat:-19.6,lon:-46.9,val:7,desc:'CBMM. Mayor niobio del mundo'},
+    {name:'Rusia — Lovozero',lat:67.9,lon:35.1,val:6,desc:'Colas de REE, Ti, Nb'},
+    {name:'Groenlandia — Kvanefjeld',lat:61.0,lon:-45.5,val:5,desc:'Grandes reservas sin explotar'},
+    {name:'India — Kerala Coast',lat:10.0,lon:76.0,val:6,desc:'Monazita costera. REE + Th'},
+    {name:'DRC — Kivu',lat:-2.0,lon:29.0,val:7,desc:'Coltan (Nb+Ta). Cobalto. EV crítico'},
+  ],
+  ports:[
+    {name:'Estrecho de Ormuz',lat:26.6,lon:56.3,type:'choke',desc:'20% petróleo mundial. Irán puede cerrar'},
+    {name:'Canal de Suez',lat:30.5,lon:32.3,type:'choke',desc:'12% comercio mundial. 1M b/día petróleo'},
+    {name:'Estrecho de Malaca',lat:1.3,lon:103.8,type:'choke',desc:'80% importaciones petróleo de China/Japón'},
+    {name:'Bab-el-Mandeb',lat:12.6,lon:43.4,type:'choke',desc:'Mar Rojo — ataques Houthi activos'},
+    {name:'Estrecho de Bósforo',lat:41.1,lon:29.0,type:'choke',desc:'Exportaciones trigo Ucrania/Rusia'},
+    {name:'Canal de Panamá',lat:9.1,lon:-79.7,type:'canal',desc:'5% comercio global. LNG EE.UU.→Asia'},
+    {name:'Rotterdam',lat:51.9,lon:4.5,type:'port',desc:'Mayor puerto de Europa. Hub energético'},
+    {name:'Singapur',lat:1.3,lon:103.8,type:'port',desc:'2º mayor puerto del mundo'},
+    {name:'Shanghai',lat:31.4,lon:121.7,type:'port',desc:'Mayor puerto del mundo'},
+    {name:'Houston',lat:29.8,lon:-95.0,type:'port',desc:'Capital energética EE.UU. Petroquímica'},
+    {name:'Ras Tanura',lat:26.7,lon:50.2,type:'port',desc:'Mayor terminal petrolífera del mundo. Saudi Aramco'},
+  ],
+};
+
+// Colores por commodity
+var COMM_COLOR={oil:'#ff4400',gas:'#4488ff',wheat:'#ffd700',gold:'#ffdd44',rare:'#aa44ff',ports:'#00ff88'};
+
+// ════════════════════════════════════════════════════════════
+//  COORDS para noticias
+// ════════════════════════════════════════════════════════════
+var ZONES={
+  ukraine:[48.37,31.16],russia:[55.75,37.61],kyiv:[50.45,30.52],
+  kharkiv:[50.0,36.23],crimea:[45.3,34.0],donbas:[48.0,38.0],
+  gaza:[31.35,34.30],israel:[31.77,35.21],
+  iran:[32.43,53.68],tehran:[35.68,51.38],
+  syria:[34.80,38.99],damascus:[33.51,36.29],
+  yemen:[15.55,48.51],houthi:[14.53,43.73],
+  'red sea':[20.0,38.0],'mar rojo':[20.0,38.0],
+  lebanon:[33.88,35.50],beirut:[33.88,35.50],
+  iraq:[33.22,43.67],baghdad:[33.34,44.40],
+  taiwan:[23.70,121.0],china:[35.86,104.19],
+  'north korea':[40.33,127.51],
+  'persian gulf':[27.0,52.0],'strait of hormuz':[26.5,56.5],
+  'saudi arabia':[24.68,46.72],
+  sudan:[15.55,32.53],somalia:[5.15,46.20],
+  pakistan:[30.37,69.34],afghanistan:[33.93,67.71],
+  turkey:[38.96,35.24],egypt:[26.82,30.80],
+  donetsk:[48.02,37.80],luhansk:[48.57,39.34],
+  mariupol:[47.10,37.54],bakhmut:[48.60,38.0],
+  'gulf of aden':[12.0,48.0],
+};
+
+// ════════════════════════════════════════════════════════════
+//  CESIUM INIT
+// ════════════════════════════════════════════════════════════
+var viewer=new Cesium.Viewer('cesiumContainer',{
+  baseLayerPicker:false,
+  geocoder:false,
+  homeButton:false,
+  sceneModePicker:false,
+  navigationHelpButton:false,
+  animation:false,
+  timeline:false,
+  fullscreenButton:false,
+  vrButton:false,
+  infoBox:false,
+  selectionIndicator:false,
+  creditContainer:document.createElement('div'),
+});
+
+// Imagery oscura tipo military ops
+viewer.imageryLayers.removeAll();
+viewer.imageryLayers.addImageryProvider(new Cesium.UrlTemplateImageryProvider({
+  url:'https://services.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}',
+  tilingScheme:new Cesium.WebMercatorTilingScheme(),
+  maximumLevel:16,
+}));
+// Labels layer
+viewer.imageryLayers.addImageryProvider(new Cesium.UrlTemplateImageryProvider({
+  url:'https://services.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}',
+  tilingScheme:new Cesium.WebMercatorTilingScheme(),
+  maximumLevel:16,
+}));
+
+// Atmosphere
+viewer.scene.globe.enableLighting=true;
+viewer.scene.skyBox=undefined;
+viewer.scene.backgroundColor=new Cesium.Color(0.01,0.035,0.07,1);
+viewer.scene.globe.baseColor=new Cesium.Color(0.02,0.06,0.12,1);
+viewer.scene.fog.enabled=true;
+viewer.scene.fog.density=0.00015;
+
+// Camera initial position
+viewer.camera.setView({
+  destination:Cesium.Cartesian3.fromDegrees(25,35,18000000),
+  orientation:{heading:0,pitch:-Cesium.Math.PI_OVER_TWO,roll:0}
+});
+
+// Coord display on hover
+var handler=new Cesium.ScreenSpaceEventHandler(viewer.scene.canvas);
+handler.setInputAction(function(e){
+  var cartesian=viewer.camera.pickEllipsoid(e.endPosition,viewer.scene.globe.ellipsoid);
+  if(cartesian){
+    var carto=Cesium.Cartographic.fromCartesian(cartesian);
+    var lon=(Cesium.Math.toDegrees(carto.longitude)).toFixed(2);
+    var lat=(Cesium.Math.toDegrees(carto.latitude)).toFixed(2);
+    document.getElementById('coord-display').textContent=lat+'°N '+lon+'°E';
+  }
+},Cesium.ScreenSpaceEventType.MOUSE_MOVE);
+
+// Click handler
+handler.setInputAction(function(e){
+  var picked=viewer.scene.pick(e.position);
+  if(picked&&picked.id&&picked.id._data){
+    showDetail(picked.id._data);
+  }
+},Cesium.ScreenSpaceEventType.LEFT_CLICK);
+
+// ════════════════════════════════════════════════════════════
+//  ENTITY COLLECTIONS
+// ════════════════════════════════════════════════════════════
+var LAYERS={
+  news:new Cesium.EntityCollection(),
+  attack:new Cesium.EntityCollection(),
+  mil:new Cesium.EntityCollection(),
+  oil:null,gas:null,wheat:null,gold:null,rare:null,ports:null,
+};
+
+// DataSources for layers
+var DS={
+  news:new Cesium.CustomDataSource('news'),
+  attack:new Cesium.CustomDataSource('attack'),
+  mil:new Cesium.CustomDataSource('mil'),
+  oil:new Cesium.CustomDataSource('oil'),
+  gas:new Cesium.CustomDataSource('gas'),
+  wheat:new Cesium.CustomDataSource('wheat'),
+  gold:new Cesium.CustomDataSource('gold'),
+  rare:new Cesium.CustomDataSource('rare'),
+  ports:new Cesium.CustomDataSource('ports'),
+};
+Object.values(DS).forEach(function(ds){viewer.dataSources.add(ds);});
+
+// ════════════════════════════════════════════════════════════
+//  COMMODITY LAYER RENDER
+// ════════════════════════════════════════════════════════════
+function renderCommodity(key){
+  DS[key].entities.removeAll();
+  var data=COMMODITIES[key]||[];
+  var color=Cesium.Color.fromCssColorString(COMM_COLOR[key]||'#ffffff');
+  data.forEach(function(d){
+    var sz=8+d.val*4; // tamaño proporcional al valor
+    DS[key].entities.add({
+      _data:{type:'commodity',comm:key,name:d.name,desc:d.desc,val:d.val},
+      position:Cesium.Cartesian3.fromDegrees(d.lon,d.lat,0),
+      ellipse:{
+        semiMinorAxis:sz*15000,
+        semiMajorAxis:sz*15000,
+        material:color.withAlpha(0.35),
+        outline:true,
+        outlineColor:color.withAlpha(0.8),
+        outlineWidth:1,
+        heightReference:Cesium.HeightReference.CLAMP_TO_GROUND,
+      },
+      label:{
+        text:d.name.split(' — ')[0],
+        font:'10px Share Tech Mono',
+        fillColor:color,
+        outlineColor:Cesium.Color.BLACK,
+        outlineWidth:2,
+        style:Cesium.LabelStyle.FILL_AND_OUTLINE,
+        pixelOffset:new Cesium.Cartesian2(0,-sz*1.5),
+        distanceDisplayCondition:new Cesium.DistanceDisplayCondition(0,8000000),
+        heightReference:Cesium.HeightReference.CLAMP_TO_GROUND,
+      }
+    });
+  });
+  // Update legend
+  showCommLegend(key,data);
+}
+
+function showCommLegend(key,data){
+  var leg=document.getElementById('commLegend');
+  var c=COMM_COLOR[key]||'#fff';
+  var names={oil:'PETRÓLEO',gas:'GAS NATURAL',wheat:'TRIGO',gold:'ORO / METALES',rare:'TIERRAS RARAS',ports:'PUERTOS / CHOKE POINTS'};
+  document.getElementById('comm-title').textContent=names[key]||key.toUpperCase();
+  document.getElementById('comm-title').style.color=c;
+  var html='';
+  data.slice(0,8).forEach(function(d){
+    html+='<div class="cl-item"><div class="cl-dot" style="background:'+c+';opacity:'+(0.4+d.val*0.06)+'"></div>'+esc(d.name.split(' — ')[0])+'</div>';
+  });
+  document.getElementById('comm-items').innerHTML=html;
+  leg.style.display='block';
+}
+
+window.toggleLayer=function(key){
+  var cb=document.getElementById('l-'+key);
+  if(!cb) return;
+  var on=cb.checked;
+  if(DS[key]){
+    DS[key].show=on;
+    if(on&&key!=='news'&&key!=='attack'&&key!=='mil'){
+      if(DS[key].entities.values.length===0) renderCommodity(key);
+      else showCommLegend(key,COMMODITIES[key]||[]);
+    }
+    if(!on&&['oil','gas','wheat','gold','rare','ports'].includes(key)){
+      var anyOn=['oil','gas','wheat','gold','rare','ports'].some(function(k){
+        return document.getElementById('l-'+k)&&document.getElementById('l-'+k).checked;
+      });
+      if(!anyOn) document.getElementById('commLegend').style.display='none';
+    }
+  }
+};
+
+// ════════════════════════════════════════════════════════════
+//  NEWS ENTITIES
+// ════════════════════════════════════════════════════════════
+var seenH=new Set();
+function h32(s){var h=5381;for(var i=0;i<s.length;i++)h=((h<<5)+h)^s.charCodeAt(i);return(h>>>0).toString(36);}
+
+function getCoords(n){
+  if(n.coords&&n.coords.length===2&&n.coords[0]!==0) return n.coords;
+  var t=((n.titulo||'')+(n.desc||'')).toLowerCase();
+  var ks=Object.keys(ZONES).sort(function(a,b){return b.length-a.length;});
+  for(var i=0;i<ks.length;i++) if(t.indexOf(ks[i])!==-1) return ZONES[ks[i]];
+  return null;
+}
+function getTipo(t,d){
+  var s=((t||'')+(d||'')).toLowerCase();
+  if(/attack|strike|bomb|missile|kill|invasion|offensive|shelling|blast|explosion/.test(s)) return 'attack';
+  if(/military|aircraft|warship|nato|bomber|fleet/.test(s)) return 'militar';
+  if(/oil|gold|opec|sanction|market|price/.test(s)) return 'mercados';
+  return 'news';
+}
+
+// Icons by type
+var ICONS={
+  attack:'💥',militar:'✈',mercados:'📊',news:'📰',
+  fire:'🔥',missile:'🚀',ship:'⚓',drone:'🛸',
+  earthquake:'🌍',flood:'🌊',
+};
+var COLORS={
+  attack:Cesium.Color.RED,
+  militar:Cesium.Color.fromCssColorString('#4488ff'),
+  mercados:Cesium.Color.fromCssColorString('#00ff88'),
+  news:Cesium.Color.fromCssColorString('#00d4ff'),
+  urgente:Cesium.Color.fromCssColorString('#ff2b2b'),
+};
+
+function addNewsEntity(n){
+  var coords=getCoords(n);
+  if(!coords) return;
+  var tipo=n.tipo||getTipo(n.titulo,n.desc||'');
+  var isAttack=tipo==='attack'||/attack|strike|bomb|missile|blast|explosion|kill/.test((n.titulo||'').toLowerCase());
+  var ds=isAttack?DS.attack:DS.news;
+  var col=n.urgente?COLORS.urgente:(COLORS[tipo]||COLORS.news);
+  var icon=isAttack?'💥':ICONS[tipo]||'📰';
+
+  // Update counter
+  var cnid='cnt-'+(isAttack?'attack':'news');
+  var el=document.getElementById(cnid);
+  if(el) el.textContent=parseInt(el.textContent||0)+1;
+
+  var eid='n_'+h32(n.titulo||''+Math.random());
+
+  ds.entities.add({
+    id:eid,
+    _data:{...n,tipo,isAttack},
+    position:Cesium.Cartesian3.fromDegrees(coords[1],coords[0],0),
+    billboard:{
+      image:makeIconCanvas(icon,n.urgente),
+      width:n.urgente?32:24,
+      height:n.urgente?32:24,
+      verticalOrigin:Cesium.VerticalOrigin.BOTTOM,
+      heightReference:Cesium.HeightReference.CLAMP_TO_GROUND,
+      disableDepthTestDistance:Number.POSITIVE_INFINITY,
+    },
+    // Attack zone — red circle on ground
+    ...(isAttack?{
+      ellipse:{
+        semiMinorAxis:80000,
+        semiMajorAxis:80000,
+        material:new Cesium.ColorMaterialProperty(
+          new Cesium.CallbackProperty(function(){
+            return Cesium.Color.RED.withAlpha(0.12+0.08*Math.sin(Date.now()*0.003));
+          },false)
+        ),
+        outline:true,
+        outlineColor:new Cesium.CallbackProperty(function(){
+          return Cesium.Color.RED.withAlpha(0.6+0.4*Math.sin(Date.now()*0.003));
+        },false),
+        outlineWidth:2,
+        heightReference:Cesium.HeightReference.CLAMP_TO_GROUND,
+      }
+    }:{}),
+  });
+}
+
+function makeIconCanvas(emoji,urg){
+  var c=document.createElement('canvas');
+  c.width=c.height=urg?48:36;
+  var ctx=c.getContext('2d');
+  if(urg){
+    ctx.strokeStyle='rgba(255,43,43,0.8)';
+    ctx.lineWidth=2;
+    ctx.beginPath();
+    ctx.arc(24,24,22,0,Math.PI*2);
+    ctx.stroke();
+  }
+  ctx.font=(urg?'26px':'20px')+' serif';
+  ctx.textAlign='center';
+  ctx.textBaseline='middle';
+  ctx.fillText(emoji,c.width/2,c.height/2);
+  return c.toDataURL();
+}
+
+// ════════════════════════════════════════════════════════════
+//  AIRCRAFT
+// ════════════════════════════════════════════════════════════
+var acData=[];
+async function fetchAircraft(){
+  try{
+    var r=await fetch('https://opensky-network.org/api/states/all',
+      {signal:AbortSignal.timeout(10000)});
+    var d=await r.json();
+    var MIL=['RCH','CHAOS','SPAR','USAF','PAT','BAF','GAF','SAF','NATO','USMC'];
+    acData=(d.states||[]).filter(function(s){return s[5]&&s[6]&&s[8]===false;})
+      .slice(0,400).map(function(s){
+        var cs=(s[1]||'').trim();
+        var mil=MIL.some(function(p){return cs.startsWith(p);})||
+          (s[0]||'').toUpperCase().startsWith('AE');
+        return{icao:s[0],cs:cs,country:s[2],lon:s[5],lat:s[6],
+          alt:Math.round(s[7]||0),vel:Math.round(s[9]||0),mil:mil,hdg:s[10]||0};
+      });
+    renderAircraft();
+    document.getElementById('s-ac').textContent=acData.length;
+    document.getElementById('tracker-update').textContent=
+      new Date().toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'});
+    renderTracker();
+  }catch(e){}
+}
+
+function renderAircraft(){
+  DS.mil.entities.removeAll();
+  if(!document.getElementById('l-mil').checked) return;
+  acData.forEach(function(a){
+    var col=a.mil?Cesium.Color.fromCssColorString('#ff7700'):Cesium.Color.fromCssColorString('#00aaff');
+    DS.mil.entities.add({
+      _data:{type:'aircraft',...a},
+      position:Cesium.Cartesian3.fromDegrees(a.lon,a.lat,a.alt*0.3048),
+      point:{
+        pixelSize:a.mil?7:4,
+        color:col,
+        outlineColor:Cesium.Color.WHITE.withAlpha(0.3),
+        outlineWidth:1,
+        heightReference:Cesium.HeightReference.NONE,
+        disableDepthTestDistance:Number.POSITIVE_INFINITY,
+      },
+    });
+    document.getElementById('cnt-mil').textContent=acData.length;
+  });
+}
+
+function renderTracker(){
+  var tl=document.getElementById('tracker-list');
+  var mil=acData.filter(function(a){return a.mil;}).slice(0,15);
+  if(!mil.length){tl.innerHTML='<div style="padding:10px;font-size:.58rem;color:var(--t3)">Sin aeronaves militares detectadas</div>';return;}
+  tl.innerHTML=mil.map(function(a){
+    return'<div class="tr-item" onclick="flyToAircraft(\''+a.icao+'\')">'+
+      '<div class="tr-cs">✈ '+esc(a.cs||a.icao)+'</div>'+
+      '<div class="tr-dt">'+esc(a.country)+' | '+(a.alt||0)+'ft</div>'+
+      '</div>';
+  }).join('');
+}
+
+window.flyToAircraft=function(icao){
+  var a=acData.find(function(x){return x.icao===icao;});
+  if(!a) return;
+  viewer.camera.flyTo({
+    destination:Cesium.Cartesian3.fromDegrees(a.lon,a.lat,500000),
+    duration:2,
+  });
+  showDetail({type:'aircraft',...a});
+};
+
+// ════════════════════════════════════════════════════════════
+//  FETCH NEWS
+// ════════════════════════════════════════════════════════════
+var tickerItems=[];
+async function fetchNews(){
+  var items=[];
+  try{
+    var r=await fetch(CFG.redis+'/lrange/'+CFG.mapKey+'/0/199',
+      {headers:{Authorization:'Bearer '+CFG.token}});
+    var d=await r.json();
+    (d.result||[]).forEach(function(s){try{items.push(JSON.parse(s));}catch(e){}});
+  }catch(e){}
+
+  try{
+    var g=await fetch(
+      'https://api.gdeltproject.org/api/v2/doc/doc?query=war+attack+conflict+missile+iran+ukraine+israel+military&mode=artlist&maxrecords=25&sort=DateDesc&format=json&timespan=120min',
+      {signal:AbortSignal.timeout(9000)});
+    var gd=await g.json();
+    (gd.articles||[]).forEach(function(a){
+      if(!a.title) return;
+      var coords=null;
+      if(a.lat&&a.lon) coords=[parseFloat(a.lat),parseFloat(a.lon)];
+      items.push({titulo:a.title,desc:'',
+        fuente:'GDELT/'+((a.domain||'').split('.')[0]),
+        hora:new Date().toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'}),
+        tipo:getTipo(a.title,''),urgente:/BREAKING|URGENT/i.test(a.title),coords:coords});
+    });
+  }catch(e){}
+
+  DS.news.entities.removeAll();
+  DS.attack.entities.removeAll();
+  document.getElementById('cnt-news').textContent='0';
+  document.getElementById('cnt-attack').textContent='0';
+
+  seenH.clear();
+  tickerItems=[];
+  var total=0;
+  items.forEach(function(n){
+    if(!n.titulo) return;
+    var k=h32(n.titulo.toLowerCase().replace(/\W/g,'').slice(0,80));
+    if(seenH.has(k)) return;
+    seenH.add(k);
+    addNewsEntity(n);
+    tickerItems.push((n.urgente?'🚨 ':'')+(n.titulo||''));
+    total++;
+  });
+  document.getElementById('s-nw').textContent=total;
+  updateTicker();
+}
+
+function updateTicker(){
+  if(!tickerItems.length) return;
+  var txt=tickerItems.slice(0,20).map(function(t,i){
+    return'<b>► NEWS '+(i+1)+'</b><span>'+esc(t)+'</span>&nbsp;&nbsp;&nbsp;&nbsp;';
+  }).join('');
+  document.getElementById('ticker-txt').innerHTML=txt;
+}
+
+// ════════════════════════════════════════════════════════════
+//  DETAIL PANEL
+// ════════════════════════════════════════════════════════════
+function showDetail(data){
+  var panel=document.getElementById('detPanel');
+  var body=document.getElementById('det-body');
+  panel.style.display='block';
+  var html='';
+  if(data.type==='aircraft'){
+    document.getElementById('det-type-hd').textContent=(data.mil?'🪖 AERONAVE MILITAR':'✈ AERONAVE CIVIL');
+    html='<div class="det-type" style="color:'+(data.mil?'var(--ora)':'var(--acc)')+'">'+(data.mil?'MILITAR':'CIVIL')+'</div>'+
+      '<div class="det-title">'+esc(data.cs||data.icao||'—')+'</div>'+
+      '<div class="det-row"><span>ICAO</span><span>'+esc(data.icao)+'</span></div>'+
+      '<div class="det-row"><span>PAÍS</span><span>'+esc(data.country||'—')+'</span></div>'+
+      '<div class="det-row"><span>ALTITUD</span><span>'+(data.alt||0)+' ft ('+(Math.round((data.alt||0)*0.3048/1000)*1000)+' m)</span></div>'+
+      '<div class="det-row"><span>VELOCIDAD</span><span>'+(data.vel||0)+' kt</span></div>'+
+      '<div class="det-row"><span>POSICIÓN</span><span>'+data.lat.toFixed(3)+'°N '+data.lon.toFixed(3)+'°E</span></div>';
+  } else if(data.type==='commodity'){
+    var c=COMM_COLOR[data.comm]||'#fff';
+    document.getElementById('det-type-hd').textContent='📦 '+data.comm.toUpperCase();
+    html='<div class="det-type" style="color:'+c+'">MATERIA PRIMA</div>'+
+      '<div class="det-title">'+esc(data.name)+'</div>'+
+      '<div class="det-desc">'+esc(data.desc)+'</div>'+
+      '<div class="det-row"><span>INTENSIDAD</span><span>'+data.val+'/10</span></div>';
+  } else {
+    var tipo=data.tipo||getTipo(data.titulo||'',data.desc||'');
+    var isAtk=data.isAttack||tipo==='attack';
+    var col=isAtk?'var(--red)':tipo==='militar'?'#66aaff':'var(--grn)';
+    document.getElementById('det-type-hd').textContent=isAtk?'💥 ATAQUE':'📰 NOTICIA';
+    html='<div class="det-type" style="color:'+col+'">'+(isAtk?'ATAQUE DETECTADO':tipo.toUpperCase())+'</div>'+
+      '<div class="det-title">'+(data.urgente?'🚨 ':'')+esc(data.titulo||'')+'</div>'+
+      (data.desc?'<div class="det-desc">'+esc(data.desc)+'</div>':'')+
+      '<div class="det-row"><span>FUENTE</span><span>'+esc(data.fuente||'—')+'</span></div>'+
+      '<div class="det-row"><span>HORA</span><span>'+(data.hora||'—')+'</span></div>'+
+      '<div class="det-row"><span>URGENTE</span><span>'+(data.urgente?'SÍ 🚨':'NO')+'</span></div>'+
+      '<a href="'+CFG.tg+'" target="_blank" class="det-tg">📢 VER EN TELEGRAM</a>';
+  }
+  body.innerHTML=html;
+}
+window.closeDet=function(){document.getElementById('detPanel').style.display='none';};
+
+// ════════════════════════════════════════════════════════════
+//  COUNTDOWN + REFRESH
+// ════════════════════════════════════════════════════════════
+var cd=CFG.tick;
+setInterval(function(){
+  cd--;
+  document.getElementById('s-cd').textContent=Math.max(0,cd)+'s';
+  if(cd<=0){cd=CFG.tick;fetchNews();}
+},1000);
+// Aircraft every 30s
+setInterval(function(){fetchAircraft();},30000);
+
+function esc(s){return(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+
+// ════════════════════════════════════════════════════════════
+//  INIT
+// ════════════════════════════════════════════════════════════
+async function init(){
+  document.getElementById('ldtxt').textContent='Cargando globo 3D...';
+  await new Promise(function(r){setTimeout(r,500);});
+  document.getElementById('ldtxt').textContent='Descargando noticias...';
+  await fetchNews();
+  document.getElementById('ldtxt').textContent='Cargando aviones...';
+  await fetchAircraft();
+  document.getElementById('s-hr').textContent=
+    new Date().toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'});
+  document.getElementById('ld').style.display='none';
+}
+init();
+</script>
+</body>
+</html>
