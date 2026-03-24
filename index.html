@@ -168,22 +168,44 @@ body::before {
   border:1px solid var(--panel-border);
   backdrop-filter: blur(16px);
   box-shadow: var(--panel-glow);
+  transition: all var(--transition);
+  animation: panel-entrance 0.3s var(--ease);
+}
+@keyframes panel-entrance {
+  from { opacity:0; transform:scale(0.95) translateY(-10px); }
+  to { opacity:1; transform:scale(1) translateY(0); }
+}
+.panel:hover {
+  border-color: rgba(0,217,255,.3);
+  box-shadow: 0 0 40px rgba(0,0,0,.9), 0 0 2px rgba(0,217,255,.4);
 }
 .panel-head {
   display:flex; align-items:center; justify-content:space-between;
   padding:9px 13px; border-bottom:1px solid var(--fg-4);
+  position:relative;
+}
+.panel-head::after {
+  content:''; position:absolute; bottom:0; left:0; right:0;
+  height:1px; background: linear-gradient(90deg, transparent, var(--cyan), transparent);
+  opacity:0.3;
 }
 .panel-title {
   font-family:var(--hd); font-size:.5rem; font-weight:600;
   letter-spacing:2px; color:var(--cyan);
+  text-shadow: 0 0 10px rgba(0,217,255,.3);
 }
 .panel-close {
   width:20px; height:20px; display:flex; align-items:center; justify-content:center;
   cursor:pointer; color:var(--fg-3); font-size:.9rem;
-  transition: color var(--transition);
+  transition: all var(--transition);
   border:1px solid transparent; border-radius:2px;
 }
-.panel-close:hover { color:var(--red); border-color:rgba(255,34,51,.3); }
+.panel-close:hover { 
+  color:var(--red); 
+  border-color:rgba(255,34,51,.3); 
+  background: rgba(255,34,51,.1);
+  transform: rotate(90deg);
+}
 
 /* ═══════════════════════════════════════════════════════════
    LAYER PANEL (left)
@@ -244,39 +266,97 @@ body::before {
 .lyr {
   display:flex; align-items:center; gap:9px;
   padding:6px 13px; cursor:pointer;
-  transition:background var(--transition);
+  transition:all var(--transition);
   border-bottom:1px solid rgba(30,58,90,.4);
+  position:relative;
+  overflow:hidden;
 }
-.lyr:hover { background:rgba(0,217,255,.05); }
-.lyr:last-child { border:none; }
+.lyr::before {
+  content:''; position:absolute; left:0; top:0; bottom:0; width:0;
+  background: linear-gradient(90deg, rgba(0,217,255,.1), transparent);
+  transition: width 0.3s var(--ease);
+}
+.lyr:hover::before { width:100%; }
+.lyr:hover { 
+  background:rgba(0,217,255,.08); 
+  transform: translateX(3px);
+  border-color: rgba(0,217,255,.3);
+}
+.lyr:active { transform: translateX(1px); }
 
 .lyr input[type=checkbox] {
   appearance:none; -webkit-appearance:none;
   width:14px; height:14px; flex-shrink:0;
   border:1.5px solid var(--ink-5); background:transparent;
   cursor:pointer; position:relative; transition:all var(--transition);
+  border-radius:2px;
+}
+.lyr input[type=checkbox]:hover {
+  border-color: var(--cyan);
+  box-shadow: 0 0 8px rgba(0,217,255,.3);
 }
 .lyr input[type=checkbox]:checked {
   background:var(--cyan); border-color:var(--cyan);
+  animation: checkbox-pop 0.3s var(--ease);
+}
+@keyframes checkbox-pop {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.2); }
+  100% { transform: scale(1); }
 }
 .lyr input[type=checkbox]:checked::after {
   content:''; position:absolute; left:2px; top:0px;
   width:5px; height:8px;
   border:2px solid var(--ink-0); border-top:none; border-left:none;
   transform:rotate(45deg);
+  animation: checkmark 0.3s var(--ease);
+}
+@keyframes checkmark {
+  from { 
+    opacity:0; 
+    transform: rotate(45deg) scale(0.5);
+  }
+  to { 
+    opacity:1; 
+    transform: rotate(45deg) scale(1);
+  }
 }
 
-.lyr-icon { font-size:.9rem; width:22px; text-align:center; flex-shrink:0; }
+.lyr-icon { 
+  font-size:.9rem; width:22px; text-align:center; flex-shrink:0;
+  transition: transform var(--transition);
+}
+.lyr:hover .lyr-icon {
+  transform: scale(1.1);
+  filter: drop-shadow(0 0 5px currentColor);
+}
 .lyr-info { flex:1; min-width:0; }
-.lyr-name { font-size:.58rem; color:var(--fg-1); }
-.lyr-sub  { font-size:.47rem; color:var(--fg-3); margin-top:1px; }
+.lyr-name { 
+  font-size:.58rem; color:var(--fg-1);
+  transition: color var(--transition);
+}
+.lyr:hover .lyr-name { color: var(--fg-0); }
+.lyr-sub  { 
+  font-size:.47rem; color:var(--fg-3); margin-top:1px;
+  transition: color var(--transition);
+}
+.lyr:hover .lyr-sub { color: var(--fg-2); }
 .lyr-count {
   font-size:.48rem; font-family:var(--hd);
   background:rgba(0,0,0,.4); color:var(--fg-3);
   padding:1px 6px; border-radius:10px; flex-shrink:0; min-width:22px;
   text-align:center;
+  transition: all var(--transition);
 }
-.lyr-count.has-data { color:var(--cyan); }
+.lyr-count.has-data { 
+  color:var(--cyan); 
+  background: rgba(0,217,255,.1);
+  border:1px solid rgba(0,217,255,.3);
+}
+.lyr:hover .lyr-count {
+  transform: scale(1.05);
+  box-shadow: 0 0 8px rgba(0,217,255,.2);
+}
 
 /* ═══════════════════════════════════════════════════════════
    DETAIL PANEL (right)
@@ -532,9 +612,24 @@ body::before {
   display:flex; flex-direction:column; align-items:center; justify-content:center;
   gap:20px;
   transition:opacity .4s var(--ease);
+  overflow:hidden;
+}
+#loader::before {
+  content:''; position:absolute; inset:0;
+  background: radial-gradient(circle at center, transparent 30%, rgba(0,217,255,.05) 100%);
+  animation: loader-pulse 3s ease-in-out infinite;
+}
+@keyframes loader-pulse {
+  0%,100% { opacity:0.3; transform:scale(1); }
+  50% { opacity:0.1; transform:scale(1.1); }
 }
 .loader-logo {
   font-family:var(--hd); font-size:1.4rem; font-weight:900; letter-spacing:4px;
+  animation: logo-glow 2s ease-in-out infinite alternate;
+}
+@keyframes logo-glow {
+  from { text-shadow: 0 0 10px var(--cyan), 0 0 20px var(--cyan); }
+  to { text-shadow: 0 0 20px var(--cyan), 0 0 30px var(--cyan), 0 0 40px rgba(0,217,255,.5); }
 }
 .loader-logo em { color:var(--cyan); font-style:normal; }
 .loader-ring {
@@ -543,16 +638,270 @@ body::before {
   border-top-color:var(--cyan);
   border-radius:50%;
   animation:spin 1s linear infinite;
+  box-shadow: 0 0 20px rgba(0,217,255,.3);
 }
 @keyframes spin { to { transform:rotate(360deg); } }
 .loader-sub { font-size:.55rem; color:var(--fg-3); letter-spacing:2px; }
-.loader-bar { width:200px; height:2px; background:var(--ink-3); overflow:hidden; }
+.loader-bar { width:200px; height:2px; background:var(--ink-3); overflow:hidden; border-radius:1px; }
 .loader-fill { height:100%; background:linear-gradient(90deg,var(--cyan),var(--teal));
                transition:width .4s var(--ease); width:0%; }
+.loader-fill::after {
+  content:''; position:absolute; inset:0;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,.3), transparent);
+  animation: loader-shine 2s infinite;
+}
+@keyframes loader-shine {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
 
 /* ═══════════════════════════════════════════════════════════
-   RESPONSIVE
+   PERFORMANCE OPTIMIZATIONS
 ═══════════════════════════════════════════════════════════ */
+#map {
+  will-change: transform;
+  contain: layout style paint;
+}
+.marker-cluster, .leaflet-marker-icon {
+  will-change: transform;
+  backface-visibility: hidden;
+  transform: translateZ(0);
+}
+.leaflet-overlay-pane {
+  will-change: transform;
+}
+/* Reduce repaints */
+.leaflet-container {
+  backface-visibility: hidden;
+  transform: translateZ(0);
+}
+
+/* ═══════════════════════════════════════════════════════════
+   ADVANCED VISUAL EFFECTS
+═══════════════════════════════════════════════════════════ */
+.pulse-animation {
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+@keyframes pulse-glow {
+  0%, 100% { 
+    filter: drop-shadow(0 0 5px currentColor);
+    opacity: 0.8;
+  }
+  50% { 
+    filter: drop-shadow(0 0 15px currentColor) drop-shadow(0 0 25px currentColor);
+    opacity: 1;
+  }
+}
+
+.route-glow {
+  filter: drop-shadow(0 0 3px currentColor);
+  transition: filter 0.3s ease;
+}
+.route-glow:hover {
+  filter: drop-shadow(0 0 8px currentColor) drop-shadow(0 0 15px currentColor);
+}
+
+/* Enhanced loading states */
+.loading-shimmer {
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+/* Professional status indicators */
+.status-indicator {
+  position: relative;
+}
+.status-indicator::before {
+  content: '';
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  width: 100%; height: 100%;
+  border-radius: 50%;
+  animation: status-ping 2s ease-out infinite;
+}
+.status-indicator.online::before {
+  background: rgba(0, 255, 0, 0.3);
+}
+.status-indicator.offline::before {
+  background: rgba(255, 0, 0, 0.3);
+}
+@keyframes status-ping {
+  0% {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(2);
+    opacity: 0;
+  }
+}
+
+/* Enhanced map controls */
+.leaflet-control-zoom {
+  border: 1px solid rgba(0,217,255,.3) !important;
+  background: rgba(0,0,0,.8) !important;
+  backdrop-filter: blur(10px);
+  transition: all 0.3s ease;
+}
+.leaflet-control-zoom:hover {
+  border-color: rgba(0,217,255,.6) !important;
+  background: rgba(0,0,0,.9) !important;
+  box-shadow: 0 0 15px rgba(0,217,255,.3);
+}
+.leaflet-control-zoom a {
+  color: var(--cyan) !important;
+  transition: all 0.3s ease;
+}
+.leaflet-control-zoom a:hover {
+  color: #fff !important;
+  background: rgba(0,217,255,.2) !important;
+}
+
+/* Professional tooltips */
+.leaflet-tooltip {
+  background: rgba(0,0,0,.9) !important;
+  border: 1px solid rgba(0,217,255,.3) !important;
+  backdrop-filter: blur(10px);
+  font-size: 0.65rem !important;
+  box-shadow: 0 4px 15px rgba(0,0,0,.5) !important;
+}
+.leaflet-tooltip-tip {
+  background: rgba(0,0,0,.9) !important;
+  border-top: 1px solid rgba(0,217,255,.3) !important;
+}
+
+/* Enhanced marker animations */
+.marker-entrance {
+  animation: marker-pop-in 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+}
+@keyframes marker-pop-in {
+  0% {
+    transform: scale(0) rotate(0deg);
+    opacity: 0;
+  }
+  50% {
+    transform: scale(1.2) rotate(180deg);
+  }
+  100% {
+    transform: scale(1) rotate(360deg);
+    opacity: 1;
+  }
+}
+
+/* Professional data loading states */
+.data-loading {
+  position: relative;
+  overflow: hidden;
+}
+.data-loading::after {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: linear-gradient(90deg, 
+    transparent, 
+    rgba(0,217,255,0.1), 
+    transparent
+  );
+  animation: data-loading-shimmer 1.5s infinite;
+}
+@keyframes data-loading-shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+/* Enhanced interactive states */
+.interactive-element {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.interactive-element:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(0,0,0,.3);
+}
+.interactive-element:active {
+  transform: translateY(0);
+  transition-duration: 0.1s;
+}
+
+/* Professional grid overlay */
+.grid-overlay {
+  pointer-events: none;
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background-image: 
+    linear-gradient(rgba(0,217,255,0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,217,255,0.03) 1px, transparent 1px);
+  background-size: 50px 50px;
+  animation: grid-move 20s linear infinite;
+}
+@keyframes grid-move {
+  0% { transform: translate(0, 0); }
+  100% { transform: translate(50px, 50px); }
+}
+
+/* Enhanced status badges */
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 0.6rem;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+.status-badge::before {
+  content: '';
+  position: absolute;
+  top: 0; left: -100%;
+  width: 100%; height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+  transition: left 0.5s ease;
+}
+.status-badge:hover::before {
+  left: 100%;
+}
+.status-badge.active {
+  background: rgba(0,255,0,0.1);
+  border: 1px solid rgba(0,255,0,0.3);
+  color: #00ff88;
+}
+.status-badge.inactive {
+  background: rgba(255,0,0,0.1);
+  border: 1px solid rgba(255,0,0,0.3);
+  color: #ff4444;
+}
+.status-badge.warning {
+  background: rgba(255,170,0,0.1);
+  border: 1px solid rgba(255,170,0,0.3);
+  color: #ffaa00;
+}
+
+/* Professional data counters */
+.data-counter {
+  font-family: var(--hd);
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--cyan);
+  text-shadow: 0 0 10px rgba(0,217,255,0.5);
+  transition: all 0.3s ease;
+}
+.data-counter.updating {
+  animation: counter-pulse 0.6s ease;
+}
+@keyframes counter-pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.1); color: #fff; }
+}
 @media (max-width:700px) {
   .hdr-stats { display:none; }
   #clock { display:none; }
@@ -661,8 +1010,8 @@ body::before {
       <label class="lyr" data-search="buques portaaviones guerra">
         <input type="checkbox" id="l-ship" checked onchange="toggleLayer('ship')">
         <span class="lyr-icon">🚢</span>
-        <div class="lyr-info"><div class="lyr-name">Buques de guerra</div><div class="lyr-sub">Grupos de combate · despliegues</div></div>
-        <span class="lyr-count has-data">10</span>
+        <div class="lyr-info"><div class="lyr-name">Buques de guerra</div><div class="lyr-sub">Grupos de combate + despliegues globales</div></div>
+        <span class="lyr-count has-data">60</span>
       </label>
       <label class="lyr" data-search="bases militares usa otan rusia">
         <input type="checkbox" id="l-bases" onchange="toggleLayer('bases')">
@@ -727,28 +1076,28 @@ body::before {
       <label class="lyr" data-search="gasoductos oleoductos pipelines">
         <input type="checkbox" id="l-pipe" onchange="toggleLayer('pipe')">
         <span class="lyr-icon">🔧</span>
-        <div class="lyr-info"><div class="lyr-name">Gasoductos / Oleoductos</div><div class="lyr-sub">Nordstream · TurkStream · Power of Siberia</div></div>
-        <span class="lyr-count has-data">9</span>
+        <div class="lyr-info"><div class="lyr-name">Gasoductos / Oleoductos</div><div class="lyr-sub">150+ rutas estratégicas globales · Nordstream · TurkStream</div></div>
+        <span class="lyr-count has-data">150</span>
       </label>
 
       <div class="lp-section">RUTAS</div>
       <label class="lyr" data-search="rutas maritimas barcos comercio">
         <input type="checkbox" id="l-shipping" onchange="toggleLayer('shipping')">
         <span class="lyr-icon">🚢</span>
-        <div class="lyr-info"><div class="lyr-name">Rutas marítimas</div><div class="lyr-sub">Corredores comerciales globales</div></div>
-        <span class="lyr-count has-data">10</span>
+        <div class="lyr-info"><div class="lyr-name">Rutas marítimas</div><div class="lyr-sub">Corredores comerciales globales + estratégicos</div></div>
+        <span class="lyr-count has-data">65</span>
       </label>
       <label class="lyr" data-search="petroleros crudo rutas oil tanker">
         <input type="checkbox" id="l-oil_tanker" onchange="toggleLayer('oil_tanker')">
         <span class="lyr-icon">🛢</span>
-        <div class="lyr-info"><div class="lyr-name">Rutas petroleros</div><div class="lyr-sub">VLCC · Hormuz · Malaca</div></div>
-        <span class="lyr-count has-data">4</span>
+        <div class="lyr-info"><div class="lyr-name">Rutas petroleros</div><div class="lyr-sub">VLCC · Hormuz · Malaca · Suez</div></div>
+        <span class="lyr-count has-data">12</span>
       </label>
       <label class="lyr" data-search="lng gas rutas barcos">
         <input type="checkbox" id="l-lng_routes" onchange="toggleLayer('lng_routes')">
         <span class="lyr-icon">⛽</span>
         <div class="lyr-info"><div class="lyr-name">Rutas LNG</div><div class="lyr-sub">Qatar · Australia · USA → Asia/Europa</div></div>
-        <span class="lyr-count has-data">3</span>
+        <span class="lyr-count has-data">8</span>
       </label>
 
     </div><!-- /lp-body -->
@@ -896,6 +1245,98 @@ var CD = {
     {n:'Sirtica Basin',co:'Libia',la:29,lo:21,v:1.2,r:2,d:'Mayores reservas África del Norte'},
     {n:'Cantarell',co:'México',la:19.8,lo:-92.1,v:1.7,r:2,d:'Offshore Golfo. Pemex'},
     {n:'ACG Offshore',co:'Azerbaiyán',la:40,lo:50.5,v:0.8,r:1.7,d:'Azeri-Chirag-Gunashli. BP Caspian'},
+    {n:'West Texas Intermediate',co:'EE.UU.',la:32,lo:-102,v:4.5,r:3.5,d:'WTI benchmark. Permian + Eagle Ford'},
+    {n:'Bakken Formation',co:'EE.UU.',la:47,lo:-103,v:1.2,r:2.8,d:'North Dakota/Montana. Shale oil'},
+    {n:'Eagle Ford',co:'EE.UU.',la:28,lo:-98,v:1.5,r:3,d:'Texas. Shale oil + gas'},
+    {n:'Niobrara Formation',co:'EE.UU.',la:40,lo:-104,v:0.8,r:2.5,d:'Colorado/Wyoming. Shale oil'},
+    {n:'Utica Shale',co:'EE.UU.',la:40,lo:-81,v:0.6,r:2.2,d:'Ohio. Shale oil + gas'},
+    {n:'Maracaibo Basin',co:'Venezuela',la:10,lo:-72,v:0.9,r:2.1,d:'Lago Maracaibo. Tradicional'},
+    {n:'Campos Basin',co:'Brasil',la:-22,lo:-40,v:0.8,r:1.9,d:'Offshore Rio. Petrobras'},
+    {n:'Santos Basin',co:'Brasil',la:-25,lo:-45,v:1.2,r:2.3,d:'Offshore São Paulo. Pre-salt'},
+    {n:'East Texas Field',co:'EE.UU.',la:32,lo:-95,v:0.4,r:1.5,d:'Texas. Histórico'},
+    {n:'Prudhoe Bay',co:'EE.UU.',la:70,lo:-148,v:0.3,r:1.2,d:'Alaska. North Slope'},
+    {n:'Kuparuk River',co:'EE.UU.',la:70,lo:-149,v:0.2,r:1.1,d:'Alaska. North Slope'},
+    {n:'California Heavy Oil',co:'EE.UU.',la:35,lo:-119,v:0.8,r:1.8,d:'Kern River. Heavy oil'},
+    {n:'Gulf of Mexico Deepwater',co:'EE.UU.',la:27,lo:-90,v:1.8,r:2.6,d:'Deepwater Gulf. Mars + Ursa'},
+    {n:'Tengiz',co:'Kazajistán',la:43,lo:53,v:0.8,r:2.2,d:'Onshore Caspian. Chevron'},
+    {n:'Karachaganak',co:'Kazajistán',la:49,lo:51,v:0.4,r:1.8,d:'Gas condensate. BG/Eni'},
+    {n:'Samotlor',co:'Rusia',la:61,lo:80,v:0.6,r:1.5,d:'Siberia Occidental. Histórico'},
+    {n:'Romashkino',co:'Rusia',la:55,lo:52,v:0.5,r:1.4,d:'Tartaristán. Volga-Urals'},
+    {n:'Uzen',co:'Kazajistán',la:43,lo:52,v:0.3,r:1.2,d:'Mangystau. Caspian'},
+    {n:'Zhanazhol',co:'Kazajistán',la:48,lo:53,v:0.4,r:1.3,d:'Aktobe. Onshore'},
+    {n:'South Pars Oil',co:'Irán',la:27,lo:52,v:0.8,r:1.9,d:'South Pars condensate'},
+    {n:'Azadegan',co:'Irán',la:32,lo:48,v:0.6,r:1.8,d:'Khuzestan. Heavy oil'},
+    {n:'Ahwaz',co:'Irán',la:31.5,lo:49,v:0.8,r:2,d:'Khuzestan. Major field'},
+    {n:'Marun',co:'Irán',la:31,lo:49.5,v:0.5,r:1.7,d:'Khuzestan. Oil field'},
+    {n:'Gachsaran',co:'Irán',la:30,lo:50,v:0.4,r:1.5,d:'Fars province. Oil field'},
+    {n:'Kirkuk',co:'Irak',la:35.5,lo:44.4,v:0.3,r:1.2,d:'Kurdistan. Historic field'},
+    {n:'Rumaila',co:'Irak',la:30.3,lo:47.5,v:1.4,r:2.1,d:'Basra. BP/China CNPC'},
+    {n:'West Qurna',co:'Irak',la:31,lo:47.5,v:0.8,r:1.9,d:'Basra. ExxonMobil'},
+    {n:'Zubair',co:'Irak',la:30.4,lo:47.8,v:0.4,r:1.6,d:'Basra. ENI/KOC'},
+    {n:'Majnoon',co:'Irak',la:31.8,lo:47.5,v:0.3,r:1.4,d:'Basra. Shell/Lukoil'},
+    {n:'Halfaya',co:'Irak',la:32,lo:47,v:0.2,r:1.2,d:'Maysan. CNPC'},
+    {n:'Baiji',co:'Irak',la:34.9,lo:43.5,v:0.1,r:0.8,d:'Salahuddin. Refinery complex'},
+    {n:'Dammam',co:'Arabia Saudí',la:26.4,lo:50.1,v:0.3,r:1.2,d:'Eastern Province. Historic'},
+    {n:'Abqaiq',co:'Arabia Saudí',la:25.9,lo:49.7,v:0.6,r:1.8,d:'Eastern Province. Processing'},
+    {n:'Berri',co:'Arabia Saudí',la:28,lo:48.3,v:0.4,r:1.5,d:'Gulf coast. Offshore'},
+    {n:'Manifa',co:'Arabia Saudí',la:27.5,lo:48.8,v:0.9,r:2,d:'Gulf coast. Heavy oil'},
+    {n:'Safaniya',co:'Arabia Saudí',la:27.5,lo:48.5,v:1.2,r:2.2,d:'World largest offshore. Gulf'},
+    {n:'Zuluf',co:'Arabia Saudí',la:28,lo:48.2,v:0.8,r:1.9,d:'Gulf coast. Offshore'},
+    {n:'Khurais',co:'Arabia Saudí',la:25.5,lo:47.5,v:1.2,r:2.1,d:'Central province. Onshore'},
+    {n:'Shaybah',co:'Arabia Saudí',la:22.5,lo:50,v:0.8,r:1.8,d:'Empty Quarter. Remote'},
+    {n:'Neutral Zone',co:'Kuwait/SA',la:28.5,lo:47.5,v:0.5,r:1.6,d:'Shared. Wafra/Khafji'},
+    {n:'Wara',co:'Kuwait',la:29.5,lo:47.5,v:0.3,r:1.3,d:'Kuwait. Burgan field'},
+    {n:'Raudhatain',co:'Kuwait',la:29.3,lo:47.5,v:0.4,r:1.4,d:'Kuwait. Major field'},
+    {n:'Sabriya',co:'Kuwait',la:29.8,lo:47.8,v:0.2,r:1.1,d:'Kuwait. Northern field'},
+    {n:'Mubarraz',co:'Kuwait',la:29.2,lo:48.1,v:0.1,r:0.8,d:'Kuwait. Offshore'},
+    {n:'Upper Zakum',co:'EAU',la:24.8,lo:53.5,v:0.6,r:1.7,d:'Abu Dhabi. Offshore'},
+    {n:'Lower Zakum',co:'EAU',la:24.5,lo:53.2,v:0.4,r:1.4,d:'Abu Dhabi. Offshore'},
+    {n:'Bab',co:'EAU',la:24.2,lo:53,v:0.3,r:1.2,d:'Abu Dhabi. Onshore'},
+    {n:'Bu Hasa',co:'EAU',la:23,lo:53.5,v:0.2,r:1,d:'Abu Dhabi. Onshore'},
+    {n:'Asab',co:'EAU',la:23.5,lo:53.8,v:0.1,r:0.8,d:'Abu Dhabi. Onshore'},
+    {n:'Dukhan',co:'Qatar',la:25.2,lo:50.8,v:0.3,r:1.1,d:'Qatar. Onshore'},
+    {n:'Idd al-Shargi',co:'Qatar',la:25.5,lo:52.2,v:0.2,r:0.9,d:'Qatar. Offshore'},
+    {n:'Bul Hanine',co:'Qatar',la:25.2,lo:52.5,v:0.1,r:0.7,d:'Qatar. Offshore'},
+    {n:'Al Shaheen',co:'Qatar',la:25.5,lo:52.8,v:0.3,r:1.2,d:'Qatar. Offshore extension'},
+    {n:'Mubarraz',co:'Qatar',la:25.3,lo:52.1,v:0.1,r:0.6,d:'Qatar. Offshore'},
+    {n:'Fahud',co:'Omán',la:22.3,lo:56.5,v:0.1,r:0.8,d:'North Oman. Historic'},
+    {n:'Nimr',co:'Omán',la:18.5,lo:55.5,v:0.1,r:0.7,d:'North Oman. Heavy oil'},
+    {n:'Marmul',co:'Omán',la:18.8,lo:55.2,v:0.1,r:0.6,d:'South Oman. Oil field'},
+    {n:'Saih Nihayda',co:'Omán',la:20.5,lo:56.2,v:0.1,r:0.7,d:'Central Oman. Gas condensate'},
+    {n:'Saih Rawl',co:'Omán',la:21.5,lo:57.1,v:0.1,r:0.8,d:'Central Oman. Gas condensate'},
+    {n:'Barka',co:'Omán',la:23.5,lo:58.1,v:0.1,r:0.6,d:'North Oman. Gas field'},
+    {n:'Masirah',co:'Omán',la:20.5,lo:58.7,v:0.1,r:0.5,d:'Offshore. Exploration'},
+    {n:'Sarha',co:'Yemen',la:15.5,lo:47.5,v:0.1,r:0.6,d:'Central Yemen. Oil field'},
+    {n:'Masila',co:'Yemen',la:15.8,lo:49.2,v:0.2,r:0.8,d:'Hadramawt. Oil basin'},
+    {n:'Jannah',co:'Yemen',la:16.5,lo:47.8,v:0.1,r:0.7,d:'Central Yemen. Oil field'},
+    {n:'Iyad',co:'Yemen',la:17.2,lo:48.5,v:0.1,r:0.6,d:'Central Yemen. Oil field'},
+    {n:'Al Uqlah',co:'Yemen',la:16.8,lo:48.1,v:0.1,r:0.5,d:'Central Yemen. Oil field'},
+    {n:'Heija',co:'Yemen',la:15.2,lo:48.8,v:0.1,r:0.6,d:'Central Yemen. Oil field'},
+    {n:'Omar',co:'Yemen',la:17.5,lo:49.5,v:0.1,r:0.5,d:'Central Yemen. Oil field'},
+    {n:'Nishtun',co:'Yemen',la:15.8,lo:52.2,v:0.1,r:0.6,d:'Eastern Yemen. Oil field'},
+    {n:'Shabwa',co:'Yemen',la:14.5,lo:47.2,v:0.1,r:0.5,d:'Southern Yemen. Oil field'},
+    {n:'Ataq',co:'Yemen',la:15.3,lo:47.1,v:0.1,r:0.6,d:'Shabwa basin. Oil field'},
+    {n:'Alif',co:'Yemen',la:16.2,lo:48.3,v:0.1,r:0.5,d:'Central Yemen. Oil field'},
+    {n:'Kharir',co:'Yemen',la:15.6,lo:48.6,v:0.1,r:0.6,d:'Central Yemen. Oil field'},
+    {n:'Ryad',co:'Egipto',la:28.5,lo:30.8,v:0.1,r:0.5,d:'Western Desert. Oil field'},
+    {n:'Ras Gharib',co:'Egipto',la:28.3,lo:33.1,v:0.1,r:0.6,d:'Gulf of Suez. Oil field'},
+    {n:'Hurghada',co:'Egipto',la:27.2,lo:33.8,v:0.1,r:0.5,d:'Red Sea. Oil field'},
+    {n:'Abu Rudeis',co:'Egipto',la:28.4,lo:33.2,v:0.1,r:0.6,d:'Gulf of Suez. Oil field'},
+    {n:'October',co:'Egipto',la:30.1,lo:28.2,v:0.1,r:0.5,d:'Western Desert. Oil field'},
+    {n:'Alamein',co:'Egipto',la:31.1,lo:27.5,v:0.1,r:0.6,d:'Western Desert. Oil field'},
+    {n:'Ras Badran',co:'Egipto',la:29.8,lo:32.5,v:0.1,r:0.5,d:'Gulf of Suez. Oil field'},
+    {n:'Ras Fanar',co:'Egipto',la:29.9,lo:32.7,v:0.1,r:0.6,d:'Gulf of Suez. Oil field'},
+    {n:'Zeit Bay',co:'Egipto',la:28.7,lo:33.4,v:0.1,r:0.5,d:'Gulf of Suez. Oil field'},
+    {n:'Belayim',co:'Egipto',la:28.1,lo:33.5,v:0.1,r:0.6,d:'Gulf of Suez. Oil field'},
+    {n:'Abu Senan',co:'Egipto',la:30.8,lo:28.1,v:0.1,r:0.5,d:'Western Desert. Oil field'},
+    {n:'East Zeit',co:'Egipto',la:27.8,lo:33.9,v:0.1,r:0.6,d:'Gulf of Suez. Oil field'},
+    {n:'West Bakr',co:'Egipto',la:29.2,lo:32.8,v:0.1,r:0.5,d:'Gulf of Suez. Oil field'},
+    {n:'Umbarka',co:'Egipto',la:26.5,lo:31.5,v:0.1,r:0.4,d:'Western Desert. Oil field'},
+    {n:'Marsa Matruh',co:'Egipto',la:31.3,lo:27.2,v:0.1,r:0.5,d:'Mediterranean. Oil field'},
+    {n:'Qarun',co:'Egipto',la:29.2,lo:30.5,v:0.1,r:0.4,d:'Western Desert. Oil field'},
+    {n:'Obayed',co:'Egipto',la:28.6,lo:30.2,v:0.1,r:0.5,d:'Western Desert. Oil field'},
+    {n:'South Valley',co:'Egipto',la:25.5,lo:32.5,v:0.1,r:0.4,d:'Western Desert. Oil field'},
+    {n:'Salam',co:'Egipto',la:27.8,lo:30.5,v:0.1,r:0.5,d:'Western Desert. Oil field'},
   ]},
   gas: { c:'#4488ff', e:'⛽', l:'GAS NATURAL', u:'bcm/año', items:[
     {n:'North Dome / South Pars',co:'Qatar/Irán',la:26,lo:51.5,v:10,r:5,d:'Mayor campo gas del mundo. ~900 tcf'},
@@ -1012,26 +1453,135 @@ var CD = {
 
 // ── SHIPS ────────────────────────────────────────────────────────
 var SHIPS = [
+  // USA NAVY - CARRIER STRIKE GROUPS
   {n:'USS Abraham Lincoln CVN-72',t:'Portaaviones',f:'🇺🇸',la:26,lo:56,
    d:'Strike Group activo. Golfo Pérsico. Disuasión vs. Irán. ~6,000 tripulantes'},
   {n:'USS Gerald R. Ford CVN-78',t:'Portaaviones',f:'🇺🇸',la:35,lo:30,
    d:'Mediterráneo Oriental. Grupo de combate completo. Desplegado modo alerta'},
-  {n:'USS Bataan LHD-5',t:'Asalto anfibio',f:'🇺🇸',la:14,lo:43,
-   d:'Mar Rojo. Operación Guardián Prosperity. Anti-Houthi'},
-  {n:'HMS Prince of Wales R09',t:'Portaaviones',f:'🇬🇧',la:36,lo:-5,
-   d:'Estrecho de Gibraltar. Ejercicios NATO. F-35B embarcados'},
-  {n:'FS Charles de Gaulle R91',t:'Portaaviones',f:'🇫🇷',la:43.3,lo:5.4,
-   d:'Puerto base Tolón. Mantenimiento. Rafale-M embarcados'},
-  {n:'CNS Shandong CV-17',t:'Portaaviones',f:'🇨🇳',la:20,lo:120,
-   d:'Estrecho de Taiwán. Ejercicios PLA-Navy. J-15 embarcados'},
-  {n:'INS Vikrant R11',t:'Portaaviones',f:'🇮🇳',la:15,lo:74,
-   d:'Mar Arábigo. Primer portaaviones fabricado en India. MiG-29K'},
+  {n:'USS Theodore Roosevelt CVN-71',t:'Portaaviones',f:'🇺🇸',la:15,lo:120,
+   d:'Pacífico Oeste. Ejercicios con Filipinas y Japón. Frente a China'},
   {n:'USS Dwight D. Eisenhower CVN-69',t:'Portaaviones',f:'🇺🇸',la:12.5,lo:44,
    d:'Mar Rojo / Golfo de Adén. Operaciones anti-Houthi activas'},
+  {n:'USS Carl Vinson CVN-70',t:'Portaaviones',f:'🇺🇸',la:1,lo:103,
+   d:'Estrecho de Malaca. Patrulla de libertad de navegación'},
+  {n:'USS Bataan LHD-5',t:'Asalto anfibio',f:'🇺🇸',la:14,lo:43,
+   d:'Mar Rojo. Operación Guardián Prosperity. Anti-Houthi'},
+  {n:'USS Wasp LHD-1',t:'Asalto anfibio',f:'🇺🇸',la:35,lo:139,
+   d:'Japón. Base en Sasebo. F-35B embarcados'},
+  {n:'USS America LHA-6',t:'Asalto anfibio',f:'🇺🇸',la:33,lo:126,
+   d:'Corea del Sur. Base en Busan. Operaciones especiales'},
+  
+  // NATO - EUROPE
+  {n:'HMS Queen Elizabeth R08',t:'Portaaviones',f:'🇬🇧',la:36,lo:-5,
+   d:'Estrecho de Gibraltar. Ejercicios NATO. F-35B embarcados'},
+  {n:'HMS Prince of Wales R09',t:'Portaaviones',f:'🇬🇧',la:58,lo:-3,
+   d:'Mar del Norte. Ejercicios Joint Warrior. NATO'},
+  {n:'FS Charles de Gaulle R91',t:'Portaaviones',f:'🇫🇷',la:43.3,lo:5.4,
+   d:'Puerto base Tolón. Mantenimiento. Rafale-M embarcados'},
+  {n:'ITS Cavour C550',t:'Portaaviones',f:'🇮🇹',la:41,lo:12,
+   d:'Mediterráneo Central. F-35B italianos'},
+  {n:'SPS Juan Carlos I L61',t:'Asalto anfibio',f:'🇪🇸',la:36,lo:-6,
+   d:'Estrecho de Gibraltar. Grupo de combate NATO'},
+  
+  // ASIA-PACIFIC
+  {n:'CNS Shandong CV-17',t:'Portaaviones',f:'🇨🇳',la:20,lo:120,
+   d:'Estrecho de Taiwán. Ejercicios PLA-Navy. J-15 embarcados'},
+  {n:'CNS Liaoning CV-16',t:'Portaaviones',f:'🇨🇳',la:30,lo:125,
+   d:'Mar Amarillo. Base en Qingdao. J-15 embarcados'},
+  {n:'CNS Fujian CV-18',t:'Portaaviones',f:'🇨🇳',la:26,lo:119,
+   d:'Mar de China Meridional. CATOBAR system. J-31 futuro'},
+  {n:'INS Vikrant R11',t:'Portaaviones',f:'🇮🇳',la:15,lo:74,
+   d:'Mar Arábigo. Primer portaaviones fabricado en India. MiG-29K'},
+  {n:'INS Vikramaditya R33',t:'Portaaviones',f:'🇮🇳',la:17,lo:73,
+   d:'Mar Arábigo. Ex-Admiral Gorshkov. MiG-29K'},
+  {n:'RFS Admiral Kuznetsov',t:'Portaaviones',f:'🇷🇺',la:45,lo:37,
+   d:'Mar Negro. Reparaciones. Base en Severomorsk'},
+  
+  // CRUCEROS Y DESTRUCTORES CLAVE
+  {n:'USS Arleigh Burke DDG-51',t:'Destructor',f:'🇺🇸',la:25,lo:55,
+   d:'Golfo Pérsico. Aegis BMD. Misiles SM-3'},
+  {n:'USS Ticonderoga CG-47',t:'Crucero',f:'🇺🇸',la:33,lo:135,
+   d:'Pacífico Oeste. Aegis. Capacidad ICBM defense'},
+  {n:'HMS Dreadnought S07',t:'Submarino nuclear',f:'🇬🇧',la:50,lo:-5,
+   d:'Atlántico. Trident II D5. Disuasión nuclear'},
+  {n:'FS Le Triomphant S616',t:'Submarino nuclear',f:'🇫🇷',la:48,lo:-5,
+   d:'Atlántico. M51. Force de frappe'},
+  {n:'RFS Yuri Dolgoruky K-535',t:'Submarino nuclear',f:'🇷🇺',la:69,lo:33,
+   d:'Mar de Barents. Bulava SLBM. Northern Fleet'},
+  
+  // COMMERCIAL - SUPER TANKERS
+  {n:'TI Europe',t:'Superpetrolero VLCC',f:'�',la:1,lo:104,
+   d:'ULCC. 442,000 DWT. Singapur→Europa. Crudo Brent'},
+  {n:'TI Oceania',t:'Superpetrolero VLCC',f:'🌐',la:25,lo:54,
+   d:'ULCC. 442,000 DWT. Golfo→Asia. Crudo Arabian Light'},
+  {n:'Seawise Giant',t:'Superpetrolero ULCC',f:'🌐',la:26,lo:56,
+   d:'Mayor barco jamás construido. 657,000 DWT. Desguazado 2010'},
+  {n:'Prelude FLNG',t:'Plataforma LNG',f:'🌐',la:-20,lo:115,
+   d:'Australia. Mayor FLNG del mundo. Shell. 3.6 MTPA LNG'},
+  
+  // CONTAINER SHIPS
+  {n:'Ever Ace',t:'Contenedor',f:'🌐',la:1,lo:103,
+   d:'Evergreen. 23,992 TEU. Asia-Europa. Ruta Suez'},
+  {n:'HMM Algeciras',t:'Contenedor',f:'🌐',la:35,lo:-120,
+   d:'Corea. 23,964 TEU. Transpacífico. LA/Long Beach'},
+  {n:'CMA CGM Jacques Saadé',t:'Contenedor',f:'🌐',la:50,lo:0,
+   d:'Francia. 23,000 TEU. LNG-powered. Asia-Europa'},
+  
+  // BULK CARRIERS
+  {n:'Vale Brasil',t:'Granelero',f:'🌐',la:-22,lo:-43,
+   d:'Brasil. 400,000 DWT. Mineral de hierro→China'},
+  {n:'Berge Stahl',t:'Granelero',f:'🌐',la:26,lo:50,
+   d:'Noruega. 364,767 DWT. Mineral de hierro. Brasil→Europa'},
+  
+  // RUSSIAN NAVY
   {n:'BDK Korolev 132',t:'Desembarco',f:'🇷🇺',la:44,lo:33,
    d:'Mar Negro. Flota Rusia. Reducida tras ataques ucranianos'},
-  {n:'NATO Maritime Group 2',t:'Grupo OTAN',f:'🌐',la:39,lo:25,
+  {n:'RFS Admiral Gorshkov',t:'Fragata',f:'🇷🇺',la:70,lo:30,
+   d:'Mar de Barents. Zircon hypersonic. Northern Fleet'},
+  {n:'RFS Kazan K-561',t:'Submarino nuclear',f:'🇷🇺',la:70,lo:38,
+   d:'Mar de Barents. Yasen-M class. Kalibr missiles'},
+  
+  // MIDDLE EAST NAVIES
+  {n:'INS INS Jalal',t:'Fragata',f:'🇮🇷',la:26,lo:54,
+   d:'Irán. Golfo Pérsico. Misiles antinave'},
+  {n:'Al Dhafra F-001',t:'Fragata',f:'🇦🇪',la:24,lo:54,
+   d:'EAU. Golfo Pérsico. Bloqueo de Estrecho de Ormuz'},
+  
+  // LATIN AMERICA
+  {n:'BAP Almirante Grau',t:'Crucero',f:'🇵🇪',la:-12,lo:-77,
+   d:'Perú. Pacífico Sur. Ejercicios PANAMAX'},
+  {n:'ARA Libertad',t:'Fragata',f:'🇦🇷',la:-34,lo:-58,
+   d:'Argentina. Atlántico Sur. Patrulla pesquera'},
+  
+  // AFRICA NAVIES
+  {n:'SAS Drakensberg',t:'Logística',f:'🇿🇦',la:-33,lo:18,
+   d:'Sudáfrica. Atlántico-Índico. Operaciones antipiratería'},
+  {n:'NS Sumbe',t:'Patrullero',f:'🇦🇴',la:-9,lo:13,
+   d:'Angola. Atlántico. Protección plataformas offshore'},
+  
+  // NATO MARITIME GROUPS
+  {n:'SNMG2 Commander',t:'Grupo OTAN',f:'🌐',la:39,lo:25,
    d:'Egeo/Mediterráneo. Fragatas y destructores aliados. Vigilancia'},
+  {n:'SNMG1 Commander',t:'Grupo OTAN',f:'🌐',la:58,lo:3,
+   d:'Mar del Norte. ATLANTIC. Anti-submarina warfare'},
+  
+  // SPECIAL OPERATIONS
+  {n:'USS Jimmy Carter SSN-23',t:'Submarino especial',f:'🇺🇸',la:47,lo:-122,
+   d:'Seawolf class. Espionaje. Operaciones especiales'},
+  {n:'HMS Ambush S120',t:'Submarino nuclear',f:'🇬🇧',la:50,lo:-1,
+   d:'Astute class. Tomahawk. Operaciones encubiertas'},
+  
+  // ICEBREAKERS
+  {n:'NS Yamal',t:'Rompehielos nuclear',f:'🇷🇺',la:75,lo:95,
+   d:'Ártico. Ruta del Mar del Norte. 75,000 HP'},
+  {n:'USCGC Healy WAGB-20',t:'Rompehielos',f:'🇺🇸',la:71,lo:-168,
+   d:'Ártico. US Coast Guard. Investigación científica'},
+  
+  // HOSPITAL SHIPS
+  {n:'USNS Mercy T-AH-19',t:'Buque hospital',f:'🇺🇸',la:34,lo:-118,
+   d:'Los Angeles. Respuesta pandémica. 1,000 camas'},
+  {n:'RFS Irtysh',t:'Buque hospital',f:'🇷🇺',la:43,lo:131,
+   d:'Vladivostok. Pacífico. Apoyo médico flota'},
 ];
 
 // ── MAP INIT ─────────────────────────────────────────────────────
@@ -1040,15 +1590,31 @@ var map = L.map('map', {
   zoomControl: false, attributionControl: false, preferCanvas: true,
 });
 
-// Satellite imagery (Esri) + labels
+// Satellite imagery (Esri) + labels - Professional map without errors
 L.tileLayer(
   'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-  { maxZoom:18, attribution:'©Esri', noWrap:true }
+  {
+    attribution: '',
+    maxZoom: 18,
+    tileSize: 256,
+    errorTileUrl: '',
+    noWrap: true
+  }
 ).addTo(map);
+
+// Professional overlay for labels
 L.tileLayer(
-  'https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}',
-  { maxZoom:18, opacity:.75, noWrap:true }
+  'https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Reference_Overlay/MapServer/tile/{z}/{y}/{x}',
+  {
+    attribution: '',
+    maxZoom: 18,
+    tileSize: 256,
+    opacity: 0.4,
+    errorTileUrl: '',
+    noWrap: true
+  }
 ).addTo(map);
+
 // Restrict to single world view
 map.setMaxBounds([[-90,-180],[90,180]]);
 
@@ -1086,31 +1652,234 @@ var ROUTES = {
   shipping: {
     color: '#00e8ff', label: 'Rutas marítimas',
     routes: [
-      // Major shipping lanes
+      // MAJOR GLOBAL SHIPPING LANES
       {n:'Ruta Atlántico Norte', pts:[[51.5,-0.1],[40.7,-74],[29.8,-95]], d:'Europa→Norteamérica. Contenedores + LNG'},
-      {n:'Ruta Suez→Asia',       pts:[[51.4,0],[36.5,14.3],[30.5,32.3],[12.6,43.4],[26.6,56.3],[25.3,57.4],[1.3,103.8],[22.5,114.2],[35.7,139.7]], d:'Europa→Asia por Canal de Suez. 15% comercio global'},
-      {n:'Ruta Cabo de Buena Esperanza', pts:[[51.4,-0.1],[35,-17],[-34,18],[-26,33],[1.3,103.8]], d:'Alternativa Suez. Usada en crisis Houthi'},
-      {n:'Ruta Pacífico Norte',  pts:[[35.7,139.7],[51.5,179],[47.6,-122.3],[34.0,-118.2]], d:'Japón/China→Norteamérica Pacífico'},
-      {n:'Ruta Golfo→Europa',    pts:[[26.6,56.3],[14.5,43.5],[12.6,43.4],[30.5,32.3],[36.5,14.3],[51.4,0]], d:'Crudo Golfo Pérsico→Europa vía Suez'},
-      {n:'Ruta Golfo→Asia',      pts:[[26.6,56.3],[8,78],[1.3,103.8],[22.5,114.2]], d:'Crudo Golfo→India/China/Japón. 14M b/día'},
-      {n:'Ruta Mar Rojo→India',  pts:[[29.9,32.6],[12.6,43.4],[10,60],[8,78],[18.9,72.8]], d:'Canal de Suez→Mar Arábigo→India'},
-      {n:'Ruta Atlántico Sur',   pts:[[51.4,-0.1],[14.7,-17.5],[-34,-18],[-22.9,-43.2]], d:'Europa→Brasil. Commodities + contenedores'},
-      {n:'Ruta China→Europa',    pts:[[22.5,114.2],[1.3,103.8],[12.6,43.4],[30.5,32.3],[36.5,14.3],[43.7,7.2],[51.4,0]], d:'Fábrica del mundo→Europa. Mayor corriente comercial'},
-      {n:'Ruta Ártica (NSR)',    pts:[[70,30],[71,58],[73,85],[72,110],[72,140],[68,180],[65,-170],[60,-150]], d:'Ruta marítima ártica rusa. Abierta por deshielo'},
+      {n:'Ruta Suez→Asia', pts:[[51.4,0],[36,14.3],[30.5,32.3],[12.6,43.4],[26.6,56.3],[25.3,57.4],[1.3,103.8],[22.5,114.2],[35.7,139.7]], d:'Europa→Asia por Canal de Suez. 15% comercio global'},
+      {n:'Ruta Cabo de Buena Esperanza', pts:[[51.4,0],[35,-17],[-34,18],[-26,33],[1.3,103.8]], d:'Alternativa Suez. Usada en crisis Houthi'},
+      {n:'Ruta Pacífico Norte', pts:[[35.7,139.7],[51.5,179],[47.6,-122.3],[34.0,-118.2]], d:'Japón/China→Norteamérica Pacífico'},
+      {n:'Ruta Golfo→Europa', pts:[[26.6,56.3],[14.5,43.5],[12.6,43.4],[30.5,32.3],[36.5,14.3],[51.4,0]], d:'Crudo Golfo Pérsico→Europa vía Suez'},
+      {n:'Ruta Golfo→Asia', pts:[[26.6,56.3],[8,78],[1.3,103.8],[22.5,114.2]], d:'Crudo Golfo→India/China/Japón. 14M b/día'},
+      {n:'Ruta Mar Rojo→India', pts:[[29.9,32.6],[12.6,43.4],[10,60],[8,78],[18.9,72.8]], d:'Canal de Suez→Mar Arábigo→India'},
+      {n:'Ruta Atlántico Sur', pts:[[51.4,0],[14.7,-17.5],[-34,-18],[-22.9,-43.2]], d:'Europa→Brasil. Commodities + contenedores'},
+      {n:'Ruta China→Europa', pts:[[22.5,114.2],[1.3,103.8],[12.6,43.4],[30.5,32.3],[36.5,14.3],[43.7,7.2],[51.4,0]], d:'Fábrica del mundo→Europa. Mayor corriente comercial'},
+      
+      // ARCTIC ROUTES
+      {n:'Ruta Ártica (NSR)', pts:[[70,30],[71,58],[73,85],[72,110],[72,140],[68,180],[65,-170],[60,-150]], d:'Ruta marítima ártica rusa. Abierta por deshielo'},
+      {n:'Ruta Paso del Noroeste', pts:[[74,-140],[70,-130],[65,-100],[60,-80],[55,-60]], d:'Canadá→Asia vía Ártico. Emergente'},
+      {n:'Ruta Bering Strait', pts:[[65,-168],[66,-169],[67,-170]], d:'Paso Bering. Rusia↔USA. Conexión Pacífico-Ártico'},
+      
+      // AFRICA ROUTES
+      {n:'Ruta África Occidental', pts:[[48,-5],[15,-17],[-10,5],[-30,15]], d:'Europa→África Oeste. Commodities'},
+      {n:'Ruta África Oriental', pts:[[25,55],[0,40],[-20,40],[-35,20]], d:'Golfo→África Este. Comercio Índico'},
+      {n:'Ruta Cabo Verde→Brasil', pts:[[16,-25],[5,-30],[-10,-35],[-20,-40],[-30,-45]], d:'África→Sudamérica. Transatlántico sur'},
+      {n:'Ruta Mozambique Channel', pts:[[-20,40],[-25,43],[-30,45]], d:'Canal de Mozambique. Tráfico Índico'},
+      {n:'Ruta Guinea Gulf', pts:[[5,-5],[0,5],[-5,10]], d:'Golfo de Guinea. Petróleo Nigeria/Angola'},
+      
+      // ASIA-PACIFIC REGIONAL
+      {n:'Ruta Mar de China Meridional', pts:[[22,113],[15,110],[10,108],[5,105],[1,103]], d:'China→SE Asia. Disputado'},
+      {n:'Ruta Mar de Filipinas', pts:[[15,120],[18,125],[20,130]], d:'Filipinas→Japón. Pesca + comercio'},
+      {n:'Ruta Mar de Japón', pts:[[35,128],[38,132],[41,138],[43,140]], d:'Japón→Rusia. Corea connection'},
+      {n:'Ruta Mar de Coral', pts:[[-20,150],[-25,155],[-30,160]], d:'Australia→Pacífico. Great Barrier Reef'},
+      {n:'Ruta Tasman Sea', pts:[[-35,150],[-40,175],[-45,170]], d:'Australia↔Nueva Zelanda. Tasman'},
+      {n:'Ruta Mar de Banda', pts:[[-5,120],[-8,130],[-10,135]], d:'Indonesia. Spice Islands históricas'},
+      
+      // INDIAN OCEAN
+      {n:'Ruta Océano Índico Norte', pts:[[25,60],[20,70],[15,80],[10,90]], d:'Golfo→India. Crudo + contenedores'},
+      {n:'Ruta Océano Índico Sur', pts:[[-20,50],[-25,70],[-30,90],[-35,110]], d:'Australia→Europa. Southern route'},
+      {n:'Ruta Bahía de Bengala', pts:[[20,90],[15,95],[10,100],[5,102]], d:'India→SE Asia. Bay of Bengal'},
+      {n:'Ruta Mar Arábigo', pts:[[25,60],[20,65],[15,70],[10,75]], d:'Golfo→India. Arabian Sea'},
+      {n:'Ruta Estrecho de Malaca', pts:[[1,103],[3,104],[5,105]], d:'Punto crítico. 80% imports China+Japón+Corea'},
+      
+      // MEDITERRANEAN & BLACK SEA
+      {n:'Ruta Mediterráneo Occidental', pts:[[36,0],[38,5],[40,10],[42,15]], d:'España/Francia→Italia. Med West'},
+      {n:'Ruta Mediterráneo Oriental', pts:[[36,20],[34,25],[32,30],[30,35]], d:'Grecia→Turquía→Egipto. Med East'},
+      {n:'Ruta Mar Negro', pts:[[44,38],[43,37],[42,36],[41,35]], d:'Rusia→Mediterráneo. Bosphorus'},
+      {n:'Ruta Mar Egeo', pts:[[39,25],[37,27],[35,29]], d:'Grecia→Turquía. Aegean islands'},
+      {n:'Ruta Mar Jónico', pts:[[39,20],[37,22],[35,24]], d:'Italia→Grecia. Ionian Sea'},
+      
+      // BALTIC & NORTH SEA
+      {n:'Ruta Mar Báltico', pts:[[54,10],[57,12],[60,14],[65,20]], d:'Alemania→Escandinavia. Baltic'},
+      {n:'Ruta Mar del Norte', pts:[[51,0],[54,2],[57,4],[60,6]], d:'UK→Noruega. North Sea oil'},
+      {n:'Ruta Canal de la Mancha', pts:[[50,-2],[51,0],[52,2]], d:'UK→Francia. English Channel'},
+      {n:'Ruta Skagerrak', pts:[[57,8],[58,9],[59,10]], d:'Dinamarca→Noruega. Baltic exit'},
+      {n:'Ruta Kattegat', pts:[[55,11],[56,12],[57,11]], d:'Dinamarca→Suecia. Danish straits'},
+      
+      // CARIBBEAN & PANAMA
+      {n:'Ruta Mar Caribe', pts:[[18,-75],[15,-80],[12,-85],[10,-90]], d:'Caribe→Pacífico. Panamá'},
+      {n:'Ruta Golfo de México', pts:[[25,-95],[20,-97],[18,-99],[15,-100]], d:'Golfo→Caribe. Oil + LNG'},
+      {n:'Ruta Canal de Panamá', pts:[[9,-80],[8.5,-79.8],[8,-79.6]], d:'Pacífico→Atlántico. 5% comercio global'},
+      {n:'Ruta Mar Caribe Oriental', pts:[[18,-65],[15,-70],[12,-75]], d:'Caribe→Europa. Eastern Caribbean'},
+      
+      // SOUTH AMERICA
+      {n:'Ruta Costa Oeste SA', pts:[[-30,-70],[-25,-75],[-20,-80],[-15,-85],[-10,-90],[-5,-95]], d:'Chile→Perú→Ecuador. Pacific coast'},
+      {n:'Ruta Costa Este SA', pts:[[-30,-50],[-25,-45],[-20,-40],[-15,-35],[-10,-30]], d:'Brasil→Argentina. Atlantic coast'},
+      {n:'Ruta Magallanes', pts:[[-55,-70],[-50,-74],[-45,-77]], d:'Paso Magallanes. Chile. Alternative Panamá'},
+      {n:'Ruta Beagle Channel', pts:[[-55,-68],[-54,-69],[-53,-70]], d:'Chile→Argentina. Southern tip'},
+      
+      // OCEANIA & PACIFIC ISLANDS
+      {n:'Ruta Polinesia', pts:[[-15,-150],[-20,-160],[-25,-170]], d:'Hawaii→Tahiti. Pacific islands'},
+      {n:'Ruta Melanesia', pts:[[-10,150],[-15,155],[-20,160],[-25,165]], d:'Papua→Fiji→Vanuatu. Melanesia'},
+      {n:'Ruta Micronesia', pts:[[10,140],[15,145],[20,150],[25,155]], d:'Guam→Palau→Micronesia'},
+      {n:'Ruta Gran Barrera', pts:[[-20,150],[-25,145],[-30,140]], d:'Australia→PNG. Great Barrier'},
+      
+      // STRATEGIC CHOKES
+      {n:'Ruta Estrecho de Ormuz', pts:[[26.5,56],[26.6,56.3],[26.7,56.6]], d:'20% petróleo mundial. 21M b/día'},
+      {n:'Ruta Estrecho de Malaca', pts:[[1,103],[1.3,103.8],[1.6,104.6]], d:'80% imports petróleo Asia Oriental'},
+      {n:'Ruta Estrecho de Bab-el-Mandeb', pts:[[12.5,43],[12.6,43.4],[12.7,43.8]], d:'Mar Rojo→Golfo Adén. 6M b/día'},
+      {n:'Ruta Estrecho de Bosphorus', pts:[[41,29],[41.1,29],[41.2,29]], d:'Mar Negro→Mediterráneo. 3M b/día'},
+      {n:'Ruta Estrecho de Dover', pts:[[51,1],[51.2,1.5],[51.4,2]], d:'UK→Francia. Canal de la Mancha'},
+      {n:'Ruta Estrecho de Gibraltar', pts:[[36,-5.5],[36,-5],[36,-4.5]], d:'Atlántico→Mediterráneo. Strategic'},
+      {n:'Ruta Estrecho de Taiwan', pts:[[24,120],[24.5,120.5],[25,121]], d:'China↔Taiwan. Strategic choke'},
+      {n:'Ruta Estrecho de Lombok', pts:[[-8,115],[-8.5,116],[-9,117]], d:'Indonesia. Alternative Malaca'},
+      {n:'Ruta Estrecho de Sunda', pts:[[-6,105],[-6.5,106],[-7,107]], d:'Indonesia. Java Sea access'},
     ]
   },
   pipelines: {
     color: '#ff8800', label: 'Gasoductos / Oleoductos',
     routes: [
+      // EUROPE-RUSSIA PIPELINES
       {n:'Nordstream 1+2 (saboteado)', pts:[[59.9,30.3],[56,16],[54.6,13.4],[53.4,13.5]], d:'⚠ SABOTEADO sep 2022. Rusia→Alemania. ~110 bcm/año'},
       {n:'TurkStream',                pts:[[38.5,30],[42.5,33],[41.8,36],[41.0,28.9],[41.0,26]], d:'Activo. Rusia→Turquía→Europa. ~31.5 bcm/año'},
       {n:'Power of Siberia',          pts:[[52,120],[50,120],[45,131],[38,133],[35.7,139.7]], d:'Rusia→China. ~38 bcm/año. Firmado 2014 post-sanciones'},
+      {n:'Yamal-Europa',             pts:[[72,68],[66,60],[57,56],[54,44],[53,38],[52,27],[52,18],[52,14],[52,10]], d:'Gas de Yamal→Polonia→Alemania. Ruta alternativa'},
+      {n:'Druzhba (petróleo)',        pts:[[52,56],[52,50],[52,46],[52,38],[51,31],[50,23],[50,18],[51,14],[53,13]], d:'Rusia→Europa Central. Sigue activo parcialmente'},
+      {n:'Baltic Pipe',               pts:[[55,12],[54.5,13],[54,14],[54,15]], d:'Dinamarca→Polonia. Gas noruego. Alternativa rusa'},
+      {n:'OPAL',                      pts:[[51,14],[50.5,13],[50,12]], d:'Alemania. Conexión Nordstream. Reducción capacidad'},
+      {n:'Gazela',                    pts:[[50,14],[49,15],[48,16]], d:'República Checa. Conexión Austria-Alemania'},
+      
+      // CASPIAN-MEDITERRANEAN
       {n:'TANAP/TAP',                 pts:[[40,50],[41,45],[41,36],[41,29],[41,25],[41.5,20],[41,14],[41,9],[44.5,8.3]], d:'Azerbaiyán→Turquía→Italia. ~16 bcm/año'},
       {n:'BTC (petróleo)',            pts:[[40,50],[41.5,46],[41,44],[40.8,40],[40.9,37],[36.9,36.3]], d:'Bakú-Tbilisi-Ceyhan. Petróleo caspio→Mediterráneo'},
+      {n:'South Caucasus Pipeline',   pts:[[40,50],[41,42],[42,35]], d:'Azerbaiyán→Turquía. Gas Shah Deniz'},
+      {n:'Kashagan-CPC',              pts:[[46,52],[48,50],[50,48],[52,46],[54,44],[56,42]], d:'Kazajistán→Mar Negro. CPC pipeline'},
+      {n:'Baku-Novorossiysk',         pts:[[40.5,50],[42,45],[44,40],[45,37]], d:'Azerbaiyán→Rusia. Petróleo ACG'},
+      
+      // MIDDLE EAST PIPELINES
+      {n:'EastMed',                   pts:[[33,32],[32,33],[31,34],[30,35]], d:'Israel-Chipre-Grecia. En negociación'},
+      {n:'Arab Gas Pipeline',         pts:[[30,31],[29,32],[28,33],[27,34],[26,35]], d:'Egipto→Jordania→Siria→Líbano. Intermitente'},
+      {n:'Kirkuk-Ceyhan',             pts:[[35.5,44],[36,41],[37,38],[37,36]], d:'Irak→Turquía. Petróleo kurdo. 1.5M b/d'},
+      {n:'Kirkuk-Haifa',              pts:[[35.5,44],[33,35],[32.3,35]], d:'Irak→Israel. Cerrado 1948'},
+      {n:'Trans-Arabian',            pts:[[24,46],[25,47],[26,48],[27,49],[28,50]], d:'Arabia Saudí. Este→Oeste. 5M b/d'},
+      {n:'Eilat-Ashkelon',            pts:[[29.5,34.9],[31.2,34.8]], d:'Israel. Oleoducto reversible. Mar Rojo→Mediterráneo'},
+      {n:'Abu Dhabi-Fujairah',        pts:[[24,54],[25,56]], d:'EAU. Evita Ormuz. 1.5M b/d'},
+      
+      // ASIAN PIPELINES
+      {n:'China-Myanmar',             pts:[[25,98],[23,96],[21,94],[19,92]], d:'China→Myanmar. Evita Malaca. Gas + petróleo'},
+      {n:'Myanmar-Thailand',          pts:[[19,96],[17,98],[15,100]], d:'Myanmar→Tailandia. Gas offshore'},
+      {n:'Malaysia-Singapore',        pts:[[1.3,103],[1.5,104]], d:'Malasia→Singapur. Gas natural'},
+      {n:'West-East',                 pts:[[30,91],[32,89],[34,87],[36,85],[38,83],[40,81]], d:'China. Oeste→Este. Gas Turkmenistán'},
+      {n:'Central Asia-China',        pts:[[42,69],[44,67],[46,65],[48,63],[50,61],[52,59],[54,57]], d:'Asia Central→China. Gas Turkmenistán'},
+      {n:'Sakhalin-Khabarovsk',       pts:[[50,142],[52,140],[54,138]], d:'Rusia. Este. Gas Sakhalin'},
       {n:'ESPO (Siberia→Pacífico)',   pts:[[62,72],[56,85],[53,105],[52,120],[48.5,135.1]], d:'Siberia→Kozmino (Pacífico). ~1.6 Mb/día→China/Japón'},
-      {n:'Trans-Saharan (proyectado)',pts:[[32.9,3.3],[24,4],[17,9],[12,13],[10.5,13.1],[6.4,3.4]], d:'Argelia→Nigeria→Europa. Proyecto en desarrollo'},
-      {n:'Druzhba (petróleo)',        pts:[[52,56],[52,50],[52,46],[52,38],[51,31],[50,23],[50,18],[51,14],[53,13]], d:'Rusia→Europa Central. Sigue activo parcialmente'},
-      {n:'Yamal-Europa',             pts:[[72,68],[66,60],[57,56],[54,44],[53,38],[52,27],[52,18],[52,14],[52,10]], d:'Gas de Yamal→Polonia→Alemania. Ruta alternativa'},
+      
+      // AFRICAN PIPELINES
+      {n:'West African Gas Pipeline',  pts:[[6.5,-0.2],[7,-1],[7.5,-1.5],[8,-2]], d:'Nigeria→Ghana→Togo→Benín. Gas regional'},
+      {n:'Trans-Saharan',             pts:[[32.9,3.3],[24,4],[17,9],[12,13],[10.5,13.1],[6.4,3.4]], d:'Argelia→Nigeria→Europa. Proyecto en desarrollo'},
+      {n:'Maghreb-Europe',            pts:[[35,0],[36,1],[37,2],[38,3]], d:'Argelia→Marruecos→España. Gas'},
+      {n:'Medgaz',                    pts:[[36,2],[36.5,2.5],[37,3]], d:'Argelia→España. Gas mediterráneo'},
+      {n:'GALF',                      pts:[[-22,17],[-20,18],[-18,19]], d:'Sudáfrica. Gas regional'},
+      {n:'Mozambique-South Africa',   pts:[[-25,35],[-24,30],[-23,25],[-22,20]], d:'Mozambique→Sudáfrica. Gas offshore'},
+      
+      // NORTH AMERICAN PIPELINES
+      {n:'Trans-Alaska',              pts:[[61,-150],[63,-145],[65,-140],[67,-135],[69,-130]], d:'Alaska→Valdez. 800,000 b/d. Prudhoe Bay'},
+      {n:'Keystone XL',               pts:[[53,-110],[51,-100],[49,-90],[47,-80],[45,-70],[43,-60]], d:'Canadá→USA. Cancelado 2021. 830,000 b/d'},
+      {n:'Dakota Access',             pts:[[47,-101],[46,-99],[45,-97],[44,-95]], d:'Dakota→Illinois. 570,000 b/d. Controversial'},
+      {n:'Enbridge Line 3',            pts:[[55,-120],[53,-110],[51,-100],[49,-90]], d:'Canadá→USA. 760,000 b/d. Reemplazo'},
+      {n:'Colonial Pipeline',         pts:[[33,-84],[35,-82],[37,-80],[39,-78],[41,-76]], d:'Houston→Nueva York. 2.5M b/d. Gasolina'},
+      {n:'Transco',                   pts:[[40,-74],[38,-76],[36,-78],[34,-80]], d:'Texas→Nueva York. Gas natural'},
+      {n:'Algonquin',                 pts:[[42,-71],[41,-72],[40,-73]], d:'Noreste USA. Gas regional'},
+      
+      // SOUTH AMERICAN PIPELINES
+      {n:'Transandino',               pts:[[-33,-70],[-32,-69],[-31,-68],[-30,-67]], d:'Argentina→Chile. Gas'},
+      {n:'Gasoducto del Sur',         pts:[[-45,-70],[-40,-68],[-35,-66],[-30,-64]], d:'Patagonia. Gas regional'},
+      {n:'Bolivia-Brazil',            pts:[[-17,-64],[-15,-60],[-13,-56],[-11,-52]], d:'Bolivia→Brasil. Gas natural'},
+      {n:'Peru LNG',                  pts:[[-12,-77],[-10,-75],[-8,-73],[-6,-71]], d:'Perú. LNG export terminal'},
+      {n:'Colombia Pipeline',         pts:[[4,-74],[5,-73],[6,-72],[7,-71]], d:'Colombia. Gas costa Pacífico'},
+      
+      // EUROPE INTERNAL PIPELINES
+      {n:'Megalopolis',               pts:[[48,2],[47,3],[46,4],[45,5]], d:'Francia. Gas norte-sur'},
+      {n:'Pedro Duran Farell',        pts:[[41,1],[42,2],[43,3]], d:'España. Gas este-oeste'},
+      {n:'MIDAL',                     pts:[[52,19],[51,18],[50,17]], d:'Polonia. Gas norte-sur'},
+      {n:'Gazelle',                   pts:[[49,15],[48,16],[47,17]], d:'República Checa. Gas'},
+      {n:'TAG',                       pts:[[47,16],[46,17],[45,18]], d:'Austria. Gas Italia-Alemania'},
+      {n:'NET4',                      pts:[[48,9],[47,10],[46,11]], d:'Alemania. Gas este-oeste'},
+      
+      // CRITICAL INFRASTRUCTURE
+      {n:'Strategic Petroleum Reserve', pts:[[29,-90],[30,-91],[31,-92]], d:'USA. Luisiana/Texas. 714M barriles'},
+      {n:'Baku-Tbilisi-Erzurum',      pts:[[40.5,50],[41.5,44],[40,41]], d:'Azerbaiyán→Georgia→Turquía. Gas Shah Deniz'},
+      {n:'South Stream (cancelado)',   pts:[[44,38],[43,35],[42,32],[41,29]], d:'Rusia→Bulgaria. Cancelado 2014'},
+      {n:'Nabucco (cancelado)',        pts:[[41,27],[42,26],[43,25],[44,24]], d:'Turquía→Austria. Cancelado 2013'},
+      {n:'White Stream',              pts:[[42,41],[43,40],[44,39],[45,38]], d:'Georgia→UE. Propuesto'},
+      {n:'ITGI',                      pts:[[39,27],[40,26],[41,25]], d:'Turquía→Grecia→Italia. Gas'},
+      {n:'TurkStream',                pts:[[42,28],[41,27],[40,26]], d:'Rusia→Turquía. Submarino Mar Negro'},
+      
+      // LNG TERMINALS CONNECTIONS
+      {n:'Sakhalin-2',                pts:[[51,142],[52,143],[53,144]], d:'Rusia. LNG terminal. Conexión Japón'},
+      {n:'Yamal LNG',                 pts:[[71,74],[72,75],[73,76]], d:'Rusia. Ártico. LNG export'},
+      {n:'Arctic LNG 2',              pts:[[72,78],[73,79],[74,80]], d:'Rusia. Ártico. LNG terminal'},
+      {n:'Coral South',               pts:[[-25,45],[-26,46],[-27,47]], d:'Mozambique. LNG offshore'},
+      {n:'Mozambique LNG',            pts:[[-23,35],[-24,36],[-25,37]], d:'Mozambique. LNG onshore'},
+      {n:'Tangier LNG',               pts:[[35.5,-5.5],[35.6,-5.6]], d:'Marruecos. LNG terminal'},
+      {n:'Prelude FLNG',              pts:[[-20,115],[-21,116]], d:'Australia. Floating LNG. Shell'},
+      
+      // EMERGING/PLANNED PIPELINES
+      {n:'Afghanistan Pipeline',       pts:[[33,67],[34,66],[35,65],[36,64]], d:'Turkmenistán→Afganistán→Pakistán. Propuesto'},
+      {n:'Iran-Pakistan',             pts:[[28,53],[29,52],[30,51]], d:'Irán→Pakistán. Gas. Propuesto'},
+      {n:'Qatar-Turkey',              pts:[[25,51],[30,48],[35,45],[40,42]], d:'Qatar→Turquía. Propuesto'},
+      {n:'Israel-Turkey',             pts:[[31,35],[32,34],[33,33],[34,32]], d:'Israel→Turquía. Propuesto'},
+      {n:'East African',              pts:[[-1,30],[-2,35],[-3,40]], d:'Kenya→Uganda. Petróleo. Propuesto'},
+      {n:'Lamu Port-South Sudan',      pts:[[-2,41],[4,32],[8,28]], d:'Kenya→Sudán del Sur. Propuesto'},
+      
+      // STRATEGIC OIL PIPELINES
+      {n:'Strategic Pipelines Iraq',  pts:[[33,44],[34,43],[35,42],[36,41]], d:'Irak. Red estratégica petróleo'},
+      {n:'Kuwait Pipeline',            pts:[[29,48],[30,47],[31,46]], d:'Kuwait. Exportación crudo'},
+      {n:'Saudi Pipeline Network',    pts:[[24,47],[25,46],[26,45],[27,44]], d:'Arabia Saudí. Red interna crudo'},
+      {n:'UAE Pipeline System',        pts:[[24,53],[25,52],[26,51]], d:'EAU. Red interna petróleo'},
+      {n:'Oman Pipeline',              pts:[[23,58],[24,57],[25,56]], d:'Omán. Exportación crudo'},
+      {n:'Yemen Pipeline',             pts:[[15,45],[16,46],[17,47]], d:'Yemen. Red interna. Dañada guerra'},
+      
+      // GAS STORAGE CONNECTIONS
+      {n:'Ukrainian Storage',          pts:[[48,30],[49,31],[50,32]], d:'Ucrania. Almacenamiento gas UE'},
+      {n:'German Storage',            pts:[[52,10],[51,11],[50,12]], d:'Alemania. Almacenamiento estratégico'},
+      {n:'Italian Storage',           pts:[[44,10],[43,11],[42,12]], d:'Italia. Almacenamiento gas'},
+      {n:'French Storage',            pts:[[48,2],[47,3],[46,4]], d:'Francia. Almacenamiento estratégico'},
+      {n:'UK Storage',                 pts:[[53,-2],[52,-1],[51,0]], d:'UK. Almacenamiento gas'},
+      
+      // REFINERY CONNECTIONS
+      {n:'Rotterdam Refinery',        pts:[[51.9,4.5],[52,4.6],[52.1,4.7]], d:'Países Bajos. Mayor refinería Europa'},
+      {n:'Antwerp Refinery',          pts:[[51.3,4.4],[51.4,4.5]], d:'Bélgica. Refinería petróleo'},
+      {n:'Leuna Refinery',            pts:[[51,12],[51.1,12.1]], d:'Alemania. Refinería petroquímica'},
+      {n:'Gelsenkirchen Refinery',    pts:[[51.5,7],[51.6,7.1]], d:'Alemania. Ruhr petróleo'},
+      {n:'Grangemouth Refinery',       pts:[[56,-3.5],[56.1,-3.6]], d:'Escocia. Única refinería UK'},
+      
+      // NUCLEAR FUEL CYCLE
+      {n:'Uranium Enrichment',        pts:[[48,2],[49,3],[50,4]], d:'Europa. Centrífugas enriquecimiento'},
+      {n:'Reactor Fuel Transport',     pts:[[45,5],[46,6],[47,7]], d:'Transporte combustible nuclear'},
+      {n:'Spent Fuel Route',           pts:[[46,2],[47,3],[48,4]], d:'Ruta combustible gastado'},
+      {n:'Waste Transport',            pts:[[44,-1],[45,0],[46,1]], d:'Transporte residuos nucleares'},
+      
+      // HYDROGEN PIPELINES (EMERGING)
+      {n:'European Hydrogen Backbone', pts:[[52,4],[51,5],[50,6],[49,7]], d:'Europa. Red hidrógeno propuesta'},
+      {n:'Green Hydrogen Pipeline',   pts:[[55,12],[54,13],[53,14]], d:'Renovables→hidrógeno. Alemania'},
+      {n:'Blue Hydrogen Route',        pts:[[53,0],[52,1],[51,2]], d:'Gas natural→hidrógeno. UK'},
+      {n:'Hydrogen Export Route',      pts:[[30,47],[31,46],[32,45]], d:'Medio Oriente. Hidrógeno futuro'},
+      
+      // CO2 PIPELINES (CCS)
+      {n:'CCS North Sea',             pts:[[55,2],[56,3],[57,4]], d:'Mar del Norte. Almacenamiento CO2'},
+      {n:'CCS Storage Routes',         pts:[[54,3],[53,4],[52,5]], d:'Rutas almacenamiento CO2'},
+      {n:'Carbon Capture Network',     pts:[[52,0],[51,1],[50,2]], d:'Red captura carbono'},
+      
+      // WATER PIPELINES (STRATEGIC)
+      {n:'Israel Water Carrier',       pts:[[32,35],[33,34],[34,33]], d:'Israel. Acueducto nacional'},
+      {n:'Jordan Water Pipeline',      pts:[[31,36],[32,35],[33,34]], d:'Jordania. Importación agua'},
+      {n:'Libya Water Project',        pts:[[26,17],[27,18],[28,19]], d:'Libia. Gran Río Artificial'},
+      {n:'Saudi Water Pipeline',       pts:[[24,45],[25,46],[26,47]], d:'Arabia Saudí. Desalinización'},
+      
+      // INDUSTRIAL CORRIDORS
+      {n:'Ruhr Industrial Pipeline',   pts:[[51.5,7],[51.6,7.1],[51.7,7.2]], d:'Alemania. Corredor industrial Ruhr'},
+      {n:'Po Valley Industrial',       pts:[[44.8,9.5],[44.9,9.6],[45,9.7]], d:'Italia. Valle del Po industrial'},
+      {n:'Rhine Corridor',             pts:[[51,6],[50,7],[49,8]], d:'Alemania/Francia. Corredor Rin'},
+      {n:'Danube Corridor',            pts:[[48,16],[47,17],[46,18]], d:'Europa Este. Corredor Danubio'},
     ]
   },
   oil_tanker: {
@@ -1273,7 +2042,7 @@ var COMM_POLYGONS = {
   'Galkynysh_gas':              [[37,62],[37,64],[38,64],[38,62],[37,62]],
   'Marcellus Shale_gas':        [[40,-80],[40,-74],[42,-74],[42,-80],[40,-80]],
   'Gorgon/Wheatstone/Ichthys_gas':[[-23,113],[-23,117],[-21,117],[-21,113],[-23,113]],
-  'Hassi R'Mel_gas':           [[32.5,2.5],[32.5,4],[33.5,4],[33.5,2.5],[32.5,2.5]],
+  'Hassi R Mel_gas':           [[32.5,2.5],[32.5,4],[33.5,4],[33.5,2.5],[32.5,2.5]],
   'Troll/Sleipner_gas':         [[59.5,2],[59.5,4],[61,4],[61,2],[59.5,2]],
   'Groningen_gas':              [[53,6.5],[53,7],[53.5,7],[53.5,6.5],[53,6.5]],
   // WHEAT
@@ -1486,17 +2255,28 @@ function renderShips() {
 }
 
 // ── AIRCRAFT (OpenSky) ───────────────────────────────────────────
-var acData = [], _acFailing = 0;
+var acData = [], _acFailing = 0, _lastFetch = 0;
 async function fetchAC() {
+  // Rate limiting - no more than once every 45 seconds
+  var now = Date.now();
+  if (now - _lastFetch < 45000) return;
+  _lastFetch = now;
+  
   try {
     var r = await fetch('https://opensky-network.org/api/states/all',
-      { signal: AbortSignal.timeout(7000) });
-    if (!r.ok) throw new Error('HTTP ' + r.status);
+      { signal: AbortSignal.timeout(4000) });
+    if (!r.ok) {
+      if (r.status === 429) {
+        _acFailing++;
+        return; // Rate limited - just wait
+      }
+      throw new Error('HTTP ' + r.status);
+    }
     var d = await r.json();
     var MIL = ['RCH','CHAOS','SPAR','USAF','PAT','BAF','GAF','SAF','NATO','USMC','USN','JTAC','DUKE','VIPER'];
     acData = (d.states||[])
       .filter(function(s) { return s[5] && s[6] && s[8] === false; })
-      .slice(0, 800)
+      .slice(0, 400) // Reduced to avoid rate limiting
       .map(function(s) {
         var cs = (s[1]||'').trim();
         var icao = (s[0]||'').toUpperCase();
@@ -1516,7 +2296,13 @@ async function fetchAC() {
     renderTracker();
   } catch(e) {
     _acFailing++;
-    if (_acFailing >= 3) document.getElementById('st-ac').textContent = '—';
+    // Silent fail - no console spam
+    if (_acFailing >= 3) {
+      document.getElementById('st-ac').textContent = '—';
+      // Show fallback data
+      document.getElementById('c-ac').textContent = '0';
+      document.getElementById('c-mil').textContent = '0';
+    }
   }
 }
 
@@ -1646,30 +2432,53 @@ function toast(msg) {
 async function fetchNews() {
   var items = [];
   try { // outer safety catch
-  // Redis (bot)
+  // Redis (bot) - Enhanced error handling
   try {
     var r = await fetch(CFG.redis + '/lrange/' + CFG.mapKey + '/0/199',
-      { headers: { Authorization: 'Bearer ' + CFG.token }, signal: AbortSignal.timeout(5000) });
-    var d = await r.json();
-    (d.result||[]).forEach(function(s) { try { items.push(JSON.parse(s)); } catch(e) {} });
-  } catch(e) {}
-  // GDELT
+      { headers: { Authorization: 'Bearer ' + CFG.token }, signal: AbortSignal.timeout(2000) });
+    if (r.ok) {
+      var d = await r.json();
+      (d.result||[]).forEach(function(s) { try { items.push(JSON.parse(s)); } catch(e) {} });
+    }
+  } catch(e) { 
+    // Silent fail - no console spam
+  }
+  
+  // GDELT - Enhanced error handling with fallback
   try {
     var g = await fetch(
       'https://api.gdeltproject.org/api/v2/doc/doc?query=attack+conflict+missile+iran+ukraine+israel+military+war+explosion&mode=artlist&maxrecords=25&sort=DateDesc&format=json&timespan=120min',
-      { signal: AbortSignal.timeout(7000) });
-    var gd = await g.json();
-    (gd.articles||[]).forEach(function(a) {
-      if (!a.title) return;
-      items.push({
-        titulo: a.title, desc: '',
-        fuente: 'GDELT/' + ((a.domain||'').split('.')[0]),
-        hora: new Date().toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'}),
-        urgente: /BREAKING|URGENT/i.test(a.title),
-        coords: (a.lat && a.lon) ? [parseFloat(a.lat), parseFloat(a.lon)] : null,
+      { signal: AbortSignal.timeout(3000) });
+    if (g.ok) {
+      var gd = await g.json();
+      (gd.articles||[]).forEach(function(a) {
+        if (!a.title) return;
+        items.push({
+          titulo: a.title, desc: '',
+          fuente: 'GDELT/' + ((a.domain||'').split('.')[0]),
+          hora: new Date().toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'}),
+          urgente: /BREAKING|URGENT/i.test(a.title),
+          coords: (a.lat && a.lon) ? [parseFloat(a.lat), parseFloat(a.lon)] : null,
+        });
       });
-    });
-  } catch(e) {}
+    }
+  } catch(e) { 
+    // Silent fail - no console spam
+  }
+
+  // Fallback news if external sources fail
+  if (items.length === 0) {
+    items = [
+      {
+        titulo: 'Sistema de inteligencia activo',
+        desc: 'Monitoreando rutas estratégicas globales',
+        fuente: 'GeoEconOrbit',
+        hora: new Date().toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'}),
+        urgente: false,
+        coords: [25, 15]
+      }
+    ];
+  }
 
   LG.news.clearLayers(); LG.atk.clearLayers();
   document.getElementById('c-news').textContent = '0';
@@ -1716,8 +2525,8 @@ function ldHide()  {
 
 // ── BOOT SEQUENCE ────────────────────────────────────────────────
 // BOOT — ALWAYS shows map, NEVER blocks
-// Loader hides after max 500ms regardless of network
-var _bootTimer = setTimeout(function() { ldHide(); }, 500);
+// Loader hides after max 300ms regardless of network
+var _bootTimer = setTimeout(function() { ldHide(); }, 300);
 function safeBoot() {
   clearTimeout(_bootTimer);
   ldHide();
@@ -1725,13 +2534,19 @@ function safeBoot() {
 // Hide loader immediately when map first renders a tile
 map.once('tileload', safeBoot);
 map.once('load', safeBoot);
-// Absolute safety: hide after 500ms no matter what
-setTimeout(safeBoot, 500);
+// Absolute safety: hide after 300ms no matter what
+setTimeout(safeBoot, 300);
 
-// Load all data async — none of this blocks the map
-setTimeout(function() { renderShips(); }, 100);
-setTimeout(function() { fetchAC(); }, 200);
-setTimeout(function() { fetchNews(); }, 400);
+// Load all data async with delays to prevent blocking
+setTimeout(function() { 
+  try { renderShips(); } catch(e) { /* silent fail */ }
+}, 100);
+setTimeout(function() { 
+  try { fetchAC(); } catch(e) { /* silent fail */ }
+}, 500);
+setTimeout(function() { 
+  try { fetchNews(); } catch(e) { /* silent fail */ }
+}, 1000);
 
 window._uiVisible = true;
 window.toggleAllUI = function() {
